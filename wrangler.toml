@@ -1,0 +1,13 @@
+name = "sunsetping"
+main = "src/worker.js"
+compatibility_date = "2024-09-01"
+account_id = "1a01a80affd778e3dc5812bbdcd5dc84"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sunsetping"
+database_id = "e838bc78-00f2-432f-a0a0-48afcc0c4a77"
