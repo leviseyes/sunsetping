@@ -3,11 +3,32 @@ main = "src/worker.js"
 compatibility_date = "2024-09-01"
 account_id = "1a01a80affd778e3dc5812bbdcd5dc84"
 
+# Secrets, set with `wrangler secret put` (never commit values):
+#   RESEND_API_KEY                  — omit to log emails instead of sending
+#   EMAIL_FROM                      — optional, defaults to alerts@sunsetping.com
+#   STRIPE_PAYMENT_LINK_MONTHLY     — Stripe Payment Link for Pro at $3.99/mo
+#   STRIPE_PAYMENT_LINK_YEARLY      — Stripe Payment Link for Pro at $29/yr
+#   STRIPE_PAYMENT_LINK             — optional fallback used when a plan-specific link is unset
+#   PUBLIC_BASE_URL                 — optional, defaults to https://sunsetping.com
+
 [assets]
 directory = "./public"
 binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[[routes]]
+pattern = "sunsetping.com"
+custom_domain = true
+
+[[routes]]
+pattern = "www.sunsetping.com"
+custom_domain = true
 
 [[d1_databases]]
 binding = "DB"
 database_name = "sunsetping"
 database_id = "e838bc78-00f2-432f-a0a0-48afcc0c4a77"
+migrations_dir = "migrations"

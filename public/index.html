@@ -1,31 +1,106 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SunsetPing — know when tonight's sunset is worth it</title>
-<meta name="description" content="A free daily email that scores tonight's sunset where you live.">
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Helvetica,sans-serif;color:#1f2937}
-.hero{min-height:100vh;background:linear-gradient(180deg,#1e1b4b 0%,#7c3aed 30%,#db2777 60%,#f97316 85%,#fbbf24 100%);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 20px;position:relative;overflow:hidden}
-.sun{position:absolute;bottom:-160px;width:340px;height:340px;border-radius:50%;background:radial-gradient(#fde68a,#fb923c);opacity:.9;filter:blur(2px)}
-.logo{font-weight:800;font-size:22px;letter-spacing:1px;margin-bottom:40px}h1{font-size:clamp(36px,6vw,64px);margin:0 0 14px;line-height:1.05}
-p.sub{font-size:20px;max-width:560px;opacity:.92;margin:0 0 32px}
-form{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);padding:14px;border-radius:16px;position:relative;z-index:1}
-input{padding:14px 16px;border:0;border-radius:10px;font-size:16px;min-width:220px}button{padding:14px 22px;border:0;border-radius:10px;background:#111827;color:#fff;font-weight:700;font-size:16px;cursor:pointer}
-.card{margin-top:36px;background:#fff;color:#1f2937;border-radius:16px;padding:18px 24px;box-shadow:0 10px 30px rgba(0,0,0,.25);position:relative;z-index:1;text-align:left}
-.card b{color:#f97316;font-size:28px}.small{font-size:13px;opacity:.8;margin-top:10px}
-section{max-width:900px;margin:0 auto;padding:60px 20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px}
-.f h3{margin:0 0 6px}.f p{margin:0;color:#4b5563}footer{text-align:center;padding:30px;color:#9ca3af;font-size:14px}
-</style></head><body>
-<div class="hero"><div class="sun"></div><div class="logo">☀ SunsetPing</div>
-<h1>Never miss a great sunset again.</h1>
-<p class="sub">Every afternoon we check the clouds, humidity and haze where you live, and email you a simple score: is tonight worth stepping outside?</p>
-<form id="signup" action="/api/subscribe" method="POST">
-<input type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-<input type="text" name="location" placeholder="City or ZIP code" required aria-label="City or ZIP">
-<input type="hidden" name="tz" id="tz"><button type="submit">Get my free alerts</button></form>
-<div class="small">Free forever for one location · Unsubscribe anytime</div>
-<div class="card">Tonight's sunset: <b>8/10</b><br>Worth stepping outside at <strong>6:42 PM</strong></div></div>
-<section><div class="f"><h3>🌅 One simple score</h3><p>No weather jargon. A 1–10 rating and one line telling you why.</p></div>
-<div class="f"><h3>⏰ Right on time</h3><p>Lands in your inbox a few hours before sunset, with the exact time.</p></div>
-<div class="f"><h3>✨ Pro, coming soon</h3><p>Multiple spots, sunrise alerts and a day-before heads-up.</p></div></section>
-<footer>© 2026 SunsetPing · sunsetping.com</footer>
-<script>document.getElementById('tz').value=Intl.DateTimeFormat().resolvedOptions().timeZone;</script>
-</body></html>
+<meta name="description" content="Check tonight's sunset where you are. A 1–10 score, the best viewing window, and a free same-day alert. Pro adds 10 spots, sunrise alerts, and a 7-day outlook.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="hero">
+  <div class="sun" aria-hidden="true"></div>
+  <div class="wrap">
+    <header class="nav">
+      <a class="logo" href="/">SunsetPing</a>
+      <nav>
+        <a href="#check">Tonight</a>
+        <a href="#pricing">Pricing</a>
+        <a href="/pro">Pro</a>
+      </nav>
+    </header>
+    <p class="kicker" id="check">Tonight's sky</p>
+    <h1>Never miss a great sunset again.</h1>
+    <p class="sub">Check the clouds, haze, and horizon where you are. One score tells you if it's worth stepping outside.</p>
+    <form class="lookup" id="lookup" action="/lookup" method="get">
+      <label class="sr-only" for="q">City or ZIP code</label>
+      <input id="q" name="q" type="text" placeholder="City or ZIP — try Santa Fe" required maxlength="100" autocomplete="address-level2" aria-label="City or ZIP">
+      <button class="btn primary" type="submit">Check tonight's sunset</button>
+      <button class="btn ghost" type="button" id="geo">Use my location</button>
+    </form>
+    <p class="fine">No signup to look. You'll get a shareable link for the place you check.</p>
+    <div id="result" class="result-slot" aria-live="polite">
+      <p class="empty">A score from 1 to 10, the hour to be outside, and why the sky looks that way.</p>
+    </div>
+    <div class="signup-block" id="signup">
+      <h2>Want this before the color fades?</h2>
+      <form class="signup" action="/api/subscribe" method="post">
+        <label class="sr-only" for="email">Email</label>
+        <input id="email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
+        <label class="sr-only" for="location">City or ZIP for alerts</label>
+        <input id="location" type="text" name="location" placeholder="City or ZIP code" required maxlength="100" aria-label="City or ZIP">
+        <input type="hidden" name="tz" id="tz">
+        <button type="submit">Get my free alerts</button>
+      </form>
+      <p class="fine">Free is one location and a same-day alert. Unsubscribe anytime.</p>
+    </div>
+  </div>
+</div>
+
+<section class="band">
+  <div class="wrap">
+    <h2>What you get tonight</h2>
+    <p class="section-lead">The same score we email, shown here first so you can decide before you hand over an address.</p>
+    <div class="features">
+      <article class="feature"><h3>One simple score</h3><p>1 to 10, plus one sentence. No weather jargon to decode on the sidewalk.</p></article>
+      <article class="feature"><h3>The hour that matters</h3><p>Golden hour, the moment of sunset, and when blue hour ends. Local time.</p></article>
+      <article class="feature"><h3>Why the color shows</h3><p>Low, mid, and high cloud, humidity, and visibility — the pieces that make a sky sing or go gray.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="pricing">
+  <div class="wrap">
+    <h2>Free for one horizon. Pro when you chase more.</h2>
+    <p class="section-lead">Alerts stay quiet and useful. Pro is for people with a second coastline, a cabin, or a score they'll actually leave the house for.</p>
+    <div class="plans">
+      <article class="plan">
+        <h3>Free</h3>
+        <p class="price">$0</p>
+        <ul>
+          <li>1 location</li>
+          <li>Daily same-day sunset alert</li>
+          <li>Tonight's score on the site, no account</li>
+        </ul>
+        <div class="actions"><a class="btn" href="#signup">Get free alerts</a></div>
+      </article>
+      <article class="plan pro">
+        <h3>Pro</h3>
+        <p class="price">$3.99<span>/mo</span></p>
+        <p class="alt">or $29 a year</p>
+        <ul>
+          <li>Up to 10 saved spots</li>
+          <li>Sunrise alerts</li>
+          <li>7-day sunset outlook</li>
+          <li>Day-before heads-up, at 4:00 PM local</li>
+          <li>Only alert me when the score is at least N</li>
+          <li>Best-spot-tonight ranking across your places</li>
+        </ul>
+        <div class="actions">
+          <a class="btn" href="/api/checkout?plan=monthly">Choose monthly · $3.99</a>
+          <a class="btn yearly" href="/api/checkout?plan=yearly">Choose yearly · $29</a>
+        </div>
+        <p class="note">Payment placeholder. Checkout uses a Stripe Payment Link from STRIPE_PAYMENT_LINK_MONTHLY or STRIPE_PAYMENT_LINK_YEARLY. Until one of those is set, the button explains that and does not collect a card or charge anything.</p>
+      </article>
+    </div>
+  </div>
+</section>
+<footer>© 2026 SunsetPing · sunsetping.com · <a href="/pro">Pro features</a></footer>
+<script src="/app.js" defer></script>
+<script>document.getElementById("tz").value = Intl.DateTimeFormat().resolvedOptions().timeZone;</script>
+</body>
+</html>
