@@ -16,10 +16,13 @@ function cardHtml(score) {
   const v = score.viewing || {};
   const bucket = score.score >= 8 ? "hot" : score.score >= 6 ? "good" : score.score >= 4 ? "mid" : "low";
   const vis = c.visibility?.km ?? "";
+  const pct = Number(score.score) * 10;
   return `<article class="result" data-result>
 <header class="result-top"><div><p class="eyebrow">Tonight · ${esc(score.date)}</p><h2>${esc(score.location)}</h2></div>
 <p class="pill score-${bucket}">${esc(score.verdict)}</p></header>
-<div class="result-main"><div class="dial" style="--p:${Number(score.score) * 10}"><div class="dial-hole"><strong>${esc(score.score)}</strong><span>/10</span></div></div>
+<div class="result-main"><div class="gauge" style="--score:${pct}" role="img" aria-label="Score ${esc(score.score)} out of 10">
+<svg viewBox="0 0 120 120" aria-hidden="true"><circle class="gauge-track" cx="60" cy="60" r="52"></circle><circle class="gauge-value" cx="60" cy="60" r="52"></circle></svg>
+<div class="gauge-label"><strong>${esc(score.score)}</strong><span>/10</span></div></div>
 <div><p class="sunset-line">Sun sets at <b>${esc(score.sunset)}</b> ${score.tz ? `<span class="tz">${esc(score.tz)}</span>` : ""}</p>
 <p class="reason">${esc(score.reason)}</p></div></div>
 <ol class="window">

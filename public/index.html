@@ -5,39 +5,44 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SunsetPing — know when tonight's sunset is worth it</title>
 <meta name="description" content="Check tonight's sunset where you are. A 1–10 score, the best viewing window, and a free same-day alert. Pro adds 10 spots, sunrise alerts, and a 7-day outlook.">
+<meta name="theme-color" content="#1c1612">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<div class="hero">
-  <div class="sun" aria-hidden="true"></div>
-  <div class="wrap">
-    <header class="nav">
-      <a class="logo" href="/">SunsetPing</a>
-      <nav>
-        <a href="#check">Tonight</a>
-        <a href="#pricing">Pricing</a>
-        <a href="/pro">Pro</a>
-      </nav>
-    </header>
-    <p class="kicker" id="check">Tonight's sky</p>
+<section class="stage" id="check">
+  <header class="topbar">
+    <a class="logo" href="/">SunsetPing</a>
+    <nav>
+      <a href="#check">Tonight</a>
+      <a href="#pricing">Pricing</a>
+      <a href="/pro">Pro</a>
+    </nav>
+  </header>
+  <div class="hero-copy">
+    <p class="kicker">Tonight's sky</p>
     <h1>Never miss a great sunset again.</h1>
     <p class="sub">Check the clouds, haze, and horizon where you are. One score tells you if it's worth stepping outside.</p>
-    <form class="lookup" id="lookup" action="/lookup" method="get">
+    <form class="search" id="lookup" action="/lookup" method="get">
       <label class="sr-only" for="q">City or ZIP code</label>
       <input id="q" name="q" type="text" placeholder="City or ZIP — try Santa Fe" required maxlength="100" autocomplete="address-level2" aria-label="City or ZIP">
-      <button class="btn primary" type="submit">Check tonight's sunset</button>
+      <button class="btn" type="submit">Check tonight's sunset</button>
       <button class="btn ghost" type="button" id="geo">Use my location</button>
     </form>
     <p class="fine">No signup to look. You'll get a shareable link for the place you check.</p>
+  </div>
+</section>
+<div class="sheet">
+  <div class="wrap">
     <div id="result" class="result-slot" aria-live="polite">
       <p class="empty">A score from 1 to 10, the hour to be outside, and why the sky looks that way.</p>
     </div>
     <div class="signup-block" id="signup">
       <h2>Want this before the color fades?</h2>
+      <p class="lede">Free is one location and a same-day alert. Unsubscribe anytime.</p>
       <form class="signup" action="/api/subscribe" method="post">
         <label class="sr-only" for="email">Email</label>
         <input id="email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
@@ -46,15 +51,13 @@
         <input type="hidden" name="tz" id="tz">
         <button type="submit">Get my free alerts</button>
       </form>
-      <p class="fine">Free is one location and a same-day alert. Unsubscribe anytime.</p>
     </div>
   </div>
 </div>
-
 <section class="band">
   <div class="wrap">
     <h2>What you get tonight</h2>
-    <p class="section-lead">The same score we email, shown here first so you can decide before you hand over an address.</p>
+    <p class="lede">The same score we email, shown here first so you can decide before you hand over an address.</p>
     <div class="features">
       <article class="feature"><h3>One simple score</h3><p>1 to 10, plus one sentence. No weather jargon to decode on the sidewalk.</p></article>
       <article class="feature"><h3>The hour that matters</h3><p>Golden hour, the moment of sunset, and when blue hour ends. Local time.</p></article>
@@ -62,11 +65,10 @@
     </div>
   </div>
 </section>
-
 <section class="band" id="pricing">
   <div class="wrap">
     <h2>Free for one horizon. Pro when you chase more.</h2>
-    <p class="section-lead">Alerts stay quiet and useful. Pro is for people with a second coastline, a cabin, or a score they'll actually leave the house for.</p>
+    <p class="lede">Alerts stay quiet and useful. Pro is for people with a second coastline, a cabin, or a score they'll actually leave the house for.</p>
     <div class="plans">
       <article class="plan">
         <h3>Free</h3>

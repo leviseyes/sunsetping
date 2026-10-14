@@ -47,21 +47,22 @@ export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = 
       ? "The color often starts about 15 minutes <i>before</i> the sun clears the horizon."
       : "Tip: the best color usually shows up 5–15 minutes <i>after</i> the sun drops.";
   const safeUrl = escapeHtml(unsubscribeUrl);
-  return `<!doctype html><html><body style="margin:0;background:#fff7ed;font-family:Helvetica,Arial,sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 12px">
-<table width="480" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08)">
-<tr><td style="background:linear-gradient(180deg,#312e81,#db2777 55%,#f97316);padding:36px 28px;color:#fff;text-align:center">
-<div style="font-size:14px;letter-spacing:2px;opacity:.85">SUNSETPING · ${e.date.toUpperCase()}</div>
-<div style="font-size:72px;font-weight:800;line-height:1.1;margin-top:10px">${e.score}<span style="font-size:32px;opacity:.8">/10</span></div>
-<div style="font-size:20px;font-weight:600">${e.verdict}</div></td></tr>
-<tr><td style="padding:28px">
-<p style="font-size:18px;color:#1f2937;margin:0 0 8px">${sentence}</p>
-<p style="font-size:16px;color:#4b5563;margin:0 0 20px">${e.reason}</p>
+  return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
+<table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
+<tr><td style="padding:36px 36px 8px;font-family:Helvetica,Arial,sans-serif">
+<div style="font-size:12px;letter-spacing:3px;color:#6f655d">SUNSETPING · ${e.date.toUpperCase()}</div>
+<div style="font-size:92px;line-height:.9;letter-spacing:-2px;margin:18px 0 6px;font-family:Georgia,'Times New Roman',serif">${e.score}<span style="font-size:28px;color:#6f655d;letter-spacing:0">/10</span></div>
+<div style="height:8px;width:72px;border-radius:99px;background:${c};margin:10px 0 14px"></div>
+<div style="font-size:22px;font-family:Georgia,'Times New Roman',serif">${e.verdict}</div></td></tr>
+<tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
+<p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">${sentence}</p>
+<p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">${e.reason}</p>
 ${viewingLine(r.viewing)}
 ${rankingBlock(ranking)}
-<p style="font-size:14px;color:#6b7280;margin:12px 0 0">${tip}</p>
-</td></tr><tr><td style="padding:16px 28px;background:#fafafa;font-size:12px;color:#9ca3af;text-align:center">
-You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#9ca3af">Unsubscribe</a></td></tr>
+<p style="font-size:14px;color:#6f655d;margin:16px 0 0;line-height:1.5">${tip}</p>
+</td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
+You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
