@@ -1,1 +1,12 @@
-{"name":"sunsetping","private":true,"devDependencies":{"wrangler":"^3.114.17"}}
+{
+  "name": "sunsetping",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-concurrency=1",
+    "dev": "wrangler dev --local --port 8787"
+  },
+  "devDependencies": {
+    "wrangler": "^3.114.17"
+  }
+}
