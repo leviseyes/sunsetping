@@ -2,7 +2,7 @@ function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-const SHELL_HEAD = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+const SHELL_HEAD = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -15,7 +15,7 @@ function topbar(active) {
 
 export function simplePage(title, message, status = 200) {
   const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>${esc(title)} · SunsetPing</title></head>
-<body class="gate"><main class="gate-card">
+<body class="gate">${topbar()}<main class="gate-card">
 <a class="logo" href="/">SunsetPing</a>
 <h1>${esc(title)}</h1><p>${esc(message)}</p>
 <p><a class="btn" href="/">Back to SunsetPing</a></p>
@@ -123,7 +123,7 @@ export function checkoutPlaceholder({ plan, envName }) {
   const label = plan === "yearly" ? "Pro yearly ($29/year)" : "Pro monthly ($3.99/month)";
   const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>Checkout placeholder · SunsetPing</title>
 <meta name="robots" content="noindex"></head>
-<body class="gate"><main class="gate-card">
+<body class="gate">${topbar("pro")}<main class="gate-card">
 <a class="logo" href="/">SunsetPing</a>
 <p class="eyebrow">Payment placeholder</p>
 <h1>No charge was made.</h1>
