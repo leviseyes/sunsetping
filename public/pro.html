@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SunsetPing Pro — 10 spots, sunrise, and the week ahead</title>
 <meta name="description" content="SunsetPing Pro is $3.99/month or $29/year. Ten saved spots, sunrise alerts, a 7-day outlook, a day-before heads-up, a score threshold, and a best-spot ranking.">
+<meta name="theme-color" content="#1c1612">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="subpage">
-<div class="wrap">
-  <header class="nav">
+<body>
+<section class="banner">
+  <header class="topbar">
     <a class="logo" href="/">SunsetPing</a>
     <nav>
       <a href="/#check">Tonight</a>
@@ -21,38 +22,39 @@
       <a href="/pro" aria-current="page">Pro</a>
     </nav>
   </header>
-  <div class="pro-hero">
-    <p class="kicker" style="color:#9a3412">Pro</p>
+  <div class="wrap banner-copy">
+    <p class="kicker">Pro</p>
     <h1>See the week. Pick the spot. Stay home when it's gray.</h1>
-    <p class="section-lead">Free covers one place and a same-day ping. Pro is for the week ahead, the morning color, and the question of where to stand tonight.</p>
+    <p class="lede">Free covers one place and a same-day ping. Pro is for the week ahead, the morning color, and the question of where to stand tonight.</p>
   </div>
-  <div class="grid-6">
-    <article class="feature"><h3>10 saved spots</h3><p>Home, the coast, a parent's porch. Pro holds up to ten. Free stays at the one location on your alert.</p></article>
-    <article class="feature"><h3>Sunrise alerts</h3><p>The same cloud rules, scored around sunrise, about 60 minutes before the sun clears the horizon.</p></article>
-    <article class="feature"><h3>7-day outlook</h3><p>A score for each of the next seven sunsets, so a midweek trip can aim at the right evening.</p></article>
-    <article class="feature"><h3>Day-before heads-up</h3><p>At 4:00 PM local, a note about tomorrow if it's worth planning dinner outside.</p></article>
-    <article class="feature"><h3>Score threshold</h3><p>Only alert me when the score is at least N. A 4 can stay quiet. An 8 should not.</p></article>
-    <article class="feature"><h3>Best spot tonight</h3><p>Your saved places, ranked by tonight's score, with the winner called out in the email.</p></article>
-  </div>
-
-  <section class="band" style="padding-bottom:20px">
+</section>
+<main class="wrap page">
+  <section class="band" style="padding-bottom:24px">
+    <div class="grid-6">
+      <article class="feature"><h3>10 saved spots</h3><p>Home, the coast, a parent's porch. Pro holds up to ten. Free stays at the one location on your alert.</p></article>
+      <article class="feature"><h3>Sunrise alerts</h3><p>The same cloud rules, scored around sunrise, about 60 minutes before the sun clears the horizon.</p></article>
+      <article class="feature"><h3>7-day outlook</h3><p>A score for each of the next seven sunsets, so a midweek trip can aim at the right evening.</p></article>
+      <article class="feature"><h3>Day-before heads-up</h3><p>At 4:00 PM local, a note about tomorrow if it's worth planning dinner outside.</p></article>
+      <article class="feature"><h3>Score threshold</h3><p>Only alert me when the score is at least N. A 4 can stay quiet. An 8 should not.</p></article>
+      <article class="feature"><h3>Best spot tonight</h3><p>Your saved places, ranked by tonight's score, with the winner called out in the email.</p></article>
+    </div>
+  </section>
+  <section class="band" style="padding-top:20px">
     <h2>7-day sunset outlook</h2>
-    <p class="section-lead">This preview calls the same API Pro uses. It is not emailed on the free plan.</p>
-    <form class="inline-form" id="outlook-form" style="margin-top:14px">
+    <p class="lede">This preview calls the same API Pro uses. It is not emailed on the free plan.</p>
+    <form class="inline-form" id="outlook-form" style="grid-template-columns:1fr auto;align-items:center">
       <label class="sr-only" for="outlook-q">City for the outlook</label>
       <input id="outlook-q" name="q" value="Sedona" maxlength="100" aria-label="City for the outlook">
       <button class="btn" type="submit">Show the week</button>
     </form>
     <div id="outlook" class="outlook" aria-live="polite"></div>
   </section>
-
   <section class="band" style="padding-top:10px">
     <h2>Best spot tonight</h2>
-    <p class="section-lead">A sample ranking of Sedona, Key West, and Cannon Beach. On Pro, this list is your saved spots.</p>
+    <p class="lede">A sample ranking of Sedona, Key West, and Cannon Beach. On Pro, this list is your saved spots.</p>
     <div id="ranking" class="rank" aria-live="polite"></div>
   </section>
-
-  <section class="band" id="pricing" style="padding-top:0">
+  <section class="band" id="pricing" style="padding-top:10px">
     <h2>$3.99 a month, or $29 a year.</h2>
     <div class="plans">
       <article class="plan">
@@ -81,35 +83,30 @@
       </article>
     </div>
   </section>
-
   <section class="two-col">
-    <form class="panel" id="save-spot">
+    <form class="panel stack" id="save-spot">
       <h2>Save a spot</h2>
       <p>Use the email you subscribed with. Free accounts are stopped here; Pro can store ten.</p>
-      <div class="inline-form">
-        <input type="email" name="email" placeholder="you@email.com" required aria-label="Account email">
-        <input type="text" name="location" placeholder="City or ZIP" required maxlength="100" aria-label="Spot">
-        <button class="btn" type="submit">Save spot</button>
-      </div>
+      <input type="email" name="email" placeholder="you@email.com" required aria-label="Account email">
+      <input type="text" name="location" placeholder="City or ZIP" required maxlength="100" aria-label="Spot">
+      <button class="btn" type="submit">Save spot</button>
       <p id="save-msg"></p>
     </form>
-    <form class="panel" id="settings">
+    <form class="panel stack" id="settings">
       <h2>Alert settings</h2>
       <p>Pro only. Leave the threshold blank to hear about every sunset.</p>
-      <div class="inline-form">
-        <input type="email" name="email" placeholder="you@email.com" required aria-label="Account email">
-        <select name="scoreThreshold" aria-label="Minimum score">
-          <option value="">Alert every day</option>
-          <option>6</option><option>7</option><option>8</option><option>9</option>
-        </select>
-        <label><input type="checkbox" name="sunriseAlerts"> Sunrise</label>
-        <label><input type="checkbox" name="dayBefore"> Day before</label>
-        <button class="btn" type="submit">Save settings</button>
-      </div>
+      <input type="email" name="email" placeholder="you@email.com" required aria-label="Account email">
+      <select name="scoreThreshold" aria-label="Minimum score">
+        <option value="">Alert every day</option>
+        <option>6</option><option>7</option><option>8</option><option>9</option>
+      </select>
+      <label class="check"><input type="checkbox" name="sunriseAlerts"> Sunrise</label>
+      <label class="check"><input type="checkbox" name="dayBefore"> Day before</label>
+      <button class="btn" type="submit">Save settings</button>
       <p id="settings-msg"></p>
     </form>
   </section>
-</div>
+</main>
 <footer>© 2026 SunsetPing · Alerts send only when RESEND_API_KEY is set. It is not set in this build, so the cron logs the email and does not mail anyone.</footer>
 <script src="/pro.js" defer></script>
 </body>
