@@ -2,6 +2,7 @@ import { rankScores, publicScore, scoreForecastDay, tzAbbrev, zonedWallToUtc } f
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
 import { MAX_SPOTS, runAlerts } from "./alerts.js";
 import { checkoutPlaceholder, ogSvg, sharePage, simplePage } from "./pages.js";
+import { appendPrefilledEmail, stripeWebhook } from "./stripe.js";
 
 const json = (o, status = 200, extra = {}) =>
   new Response(JSON.stringify(o), {
@@ -125,16 +126,17 @@ async function listSpots(env, subscriberId) {
   return rows.results || [];
 }
 
-function stripeUrl(env, plan) {
+function stripeUrl(env, plan, email) {
   const specific = plan === "yearly" ? env.STRIPE_PAYMENT_LINK_YEARLY : env.STRIPE_PAYMENT_LINK_MONTHLY;
   const raw = specific || env.STRIPE_PAYMENT_LINK || "";
-  if (!raw) return { url: null, envName: plan === "yearly" ? "STRIPE_PAYMENT_LINK_YEARLY" : "STRIPE_PAYMENT_LINK_MONTHLY" };
+  const envName = plan === "yearly" ? "STRIPE_PAYMENT_LINK_YEARLY" : "STRIPE_PAYMENT_LINK_MONTHLY";
+  if (!raw) return { url: null, envName };
   try {
     const u = new URL(raw);
-    if (u.protocol !== "https:") return { url: null, envName: plan === "yearly" ? "STRIPE_PAYMENT_LINK_YEARLY" : "STRIPE_PAYMENT_LINK_MONTHLY", invalid: true };
-    return { url: u.toString(), envName: plan === "yearly" ? "STRIPE_PAYMENT_LINK_YEARLY" : "STRIPE_PAYMENT_LINK_MONTHLY" };
+    if (u.protocol !== "https:") return { url: null, envName, invalid: true };
+    return { url: appendPrefilledEmail(u.toString(), email), envName };
   } catch {
-    return { url: null, envName: plan === "yearly" ? "STRIPE_PAYMENT_LINK_YEARLY" : "STRIPE_PAYMENT_LINK_MONTHLY", invalid: true };
+    return { url: null, envName, invalid: true };
   }
 }
 
@@ -159,6 +161,8 @@ async function rankInputs(spots) {
 }
 
 async function handleApi(req, url, env) {
+  if (url.pathname === "/api/stripe/webhook") return stripeWebhook(req, env);
+
   if (url.pathname === "/api/score") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
     const result = await scoreQuery(inputFromUrl(url), 1);
@@ -275,7 +279,7 @@ async function handleApi(req, url, env) {
   if (url.pathname === "/api/checkout") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
     const plan = url.searchParams.get("plan") === "yearly" ? "yearly" : "monthly";
-    const link = stripeUrl(env, plan);
+    const link = stripeUrl(env, plan, url.searchParams.get("email") || "");
     if (!link.url) return checkoutPlaceholder({ plan, envName: link.envName });
     return Response.redirect(link.url, 302);
   }
