@@ -3,6 +3,7 @@ import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
 import { MAX_SPOTS, runAlerts } from "./alerts.js";
 import { checkoutPlaceholder, ogSvg, sharePage, simplePage } from "./pages.js";
 import { appendPrefilledEmail, stripeWebhook } from "./stripe.js";
+import { growthRoute } from "./growth.js";
 
 const json = (o, status = 200, extra = {}) =>
   new Response(JSON.stringify(o), {
@@ -311,6 +312,13 @@ export default {
         assetUrl.pathname = "/pro.html";
         return env.ASSETS.fetch(new Request(assetUrl, req));
       }
+      if (url.pathname === "/faq" || url.pathname === "/faq/") {
+        const assetUrl = new URL(req.url);
+        assetUrl.pathname = "/faq.html";
+        return env.ASSETS.fetch(new Request(assetUrl, req));
+      }
+      const growth = growthRoute(url, env);
+      if (growth) return growth;
       if (url.pathname.startsWith("/api/")) {
         const handled = await handleApi(req, url, env);
         if (handled) return handled;
