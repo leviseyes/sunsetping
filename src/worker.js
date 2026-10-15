@@ -1,6 +1,7 @@
 import { rankScores, publicScore, scoreForecastDay, tzAbbrev, zonedWallToUtc } from "./scoring.js";
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
 import { MAX_SPOTS, runAlerts } from "./alerts.js";
+import { authorizeCron, issueError, prepareIssue, runWeeklyNewsletter } from "./newsletter.js";
 import { checkoutPlaceholder, ogSvg, sharePage, simplePage } from "./pages.js";
 import { appendPrefilledEmail, stripeWebhook } from "./stripe.js";
 import { growthRoute } from "./growth.js";
@@ -209,6 +210,19 @@ async function handleApi(req, url, env) {
   }
   if (url.pathname === "/api/unsubscribe") return unsubscribe(url, env);
 
+  // Editorial issue. Not on the 15-minute alert cron — that job has no copy to send.
+  // Deduped per subscriber for the issue week via alert_sends (kind newsletter).
+  if (url.pathname === "/api/cron/newsletter") {
+    if (req.method !== "POST") return json({ error: "POST only" }, 405);
+    if (!authorizeCron(req, env)) return json({ error: "Unauthorized" }, 401);
+    const now = new Date();
+    const issue = prepareIssue(await readBody(req), now);
+    const error = issueError(issue);
+    if (error) return json({ error }, 400);
+    const summary = await runWeeklyNewsletter(env, issue, now);
+    return json({ ok: true, issueDate: issue.issueDate, ...summary });
+  }
+
   if (url.pathname === "/api/account") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
     const row = await findSubscriber(env, url.searchParams.get("email"));
@@ -352,6 +366,7 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
+    // Daily alerts only. The weekly newsletter is POST /api/cron/newsletter.
     const now = new Date(event?.scheduledTime || Date.now());
     ctx.waitUntil(runAlerts(env, now));
   },
