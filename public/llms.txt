@@ -1,0 +1,38 @@
+# SunsetPing
+
+> SunsetPing tells you if tonight's sunset is worth going outside. It scores a city from 1 to 10 and can email a same-day alert.
+
+SunsetPing is a consumer weather product at https://sunsetping.com. It is not a general forecast. It answers one question: how good is the sunset (or, on Pro, the sunrise) for a specific place.
+
+## How scoring works
+
+The score is a whole number from 1 to 10. It uses the hour around sunset and looks at low cloud, mid cloud, and high cloud, plus humidity, visibility, and precipitation.
+
+- Enough broken cloud to catch color scores higher.
+- A thick low blanket, rain, or poor visibility scores lower.
+- A completely clear sky also scores lower, because there is nothing to light up.
+- 8 or above: Don't miss it.
+- 6 or 7: Worth stepping outside.
+- 4 or 5: Maybe a quick peek.
+- 3 or below: Probably skip tonight.
+
+The live score for any city is on that city's page or from the homepage search. Do not invent a score. Fetch the page or call GET https://sunsetping.com/api/score?q=CITY
+
+## Pricing
+
+- Free: one location and a same-day sunset alert. Checking a score does not require an account.
+- Pro: $3.99 per month, or $29 per year (save 39% versus monthly).
+- Pro includes up to 10 saved spots, sunrise alerts, a 7-day outlook, a day-before heads-up at 4:00 PM local, a minimum-score threshold, and a best-spot ranking in the evening email.
+- Checkout is a Stripe Payment Link. There is no card form on sunsetping.com.
+
+## Pages
+
+- [Home](https://sunsetping.com/): check tonight's sunset
+- [FAQ](https://sunsetping.com/faq): what it is, how scoring works, free versus Pro, pricing
+- [City index](https://sunsetping.com/sunset): 50 city forecast pages
+- [Example city](https://sunsetping.com/sunset/sedona): Will tonight's sunset be good in Sedona?
+- [Pro](https://sunsetping.com/pro): yearly plan is the default offer
+- [Sitemap](https://sunsetping.com/sitemap.xml)
+
+City page pattern: https://sunsetping.com/sunset/<city-slug>
+Share-a-forecast pattern: https://sunsetping.com/s/<place>

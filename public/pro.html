@@ -5,7 +5,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>SunsetPing Pro — 10 spots, sunrise, and the week ahead</title>
 <meta name="description" content="SunsetPing Pro is $3.99/month or $29/year. Ten saved spots, sunrise alerts, a 7-day outlook, a day-before heads-up, a score threshold, and a best-spot ranking.">
+<link rel="canonical" href="https://sunsetping.com/pro">
+<meta property="og:type" content="product">
+<meta property="og:site_name" content="SunsetPing">
+<meta property="og:title" content="SunsetPing Pro — 10 spots, sunrise, and the week ahead">
+<meta property="og:description" content="SunsetPing Pro is $29/year (save 39%) or $3.99/month. Ten spots, sunrise alerts, a 7-day outlook, and a best-spot ranking.">
+<meta property="og:url" content="https://sunsetping.com/pro">
+<meta property="og:image" content="https://sunsetping.com/images/mesa-dusk.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SunsetPing Pro — 10 spots, sunrise, and the week ahead">
+<meta name="twitter:description" content="SunsetPing Pro is $29/year (save 39%) or $3.99/month.">
+<meta name="twitter:image" content="https://sunsetping.com/images/mesa-dusk.jpg">
 <meta name="theme-color" content="#1c1612">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Product","name":"SunsetPing Pro","description":"Up to 10 saved spots, sunrise alerts, a 7-day sunset outlook, a day-before heads-up, a score threshold, and a best-spot ranking.","brand":{"@type":"Brand","name":"SunsetPing"},"image":"https://sunsetping.com/images/mesa-dusk.jpg","offers":[{"@type":"Offer","name":"SunsetPing Pro yearly","price":"29.00","priceCurrency":"USD","url":"https://sunsetping.com/api/checkout?plan=yearly","availability":"https://schema.org/InStock"},{"@type":"Offer","name":"SunsetPing Pro monthly","price":"3.99","priceCurrency":"USD","url":"https://sunsetping.com/api/checkout?plan=monthly","availability":"https://schema.org/InStock"}]}
+</script>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,7 +69,7 @@
     <div id="ranking" class="rank" aria-live="polite"></div>
   </section>
   <section class="band" id="pricing" style="padding-top:10px">
-    <h2>$3.99 a month, or $29 a year.</h2>
+    <h2>Yearly is $29. Save 39%.</h2>
     <div class="plans">
       <article class="plan">
         <h3>Free</h3>
@@ -68,16 +82,17 @@
       </article>
       <article class="plan pro">
         <h3>Pro</h3>
-        <p class="price">$3.99<span>/mo</span></p>
-        <p class="alt">$29/year</p>
+        <p class="badge">Save 39%</p>
+        <p class="price">$29<span>/yr</span></p>
+        <p class="alt">or $3.99/mo, billed monthly</p>
         <ul>
           <li>10 spots, sunrise, 7-day outlook</li>
           <li>Day-before heads-up and score threshold</li>
           <li>Best-spot ranking in the evening email</li>
         </ul>
         <div class="actions">
-          <a class="btn" href="/api/checkout?plan=monthly">Choose monthly · $3.99</a>
-          <a class="btn yearly" href="/api/checkout?plan=yearly">Choose yearly · $29</a>
+          <a class="btn" href="/api/checkout?plan=yearly">Choose yearly · $29</a>
+          <a class="btn yearly" href="/api/checkout?plan=monthly">Or monthly · $3.99</a>
         </div>
         <p class="note">Payment placeholder. No card is collected on SunsetPing. Set STRIPE_PAYMENT_LINK_MONTHLY or STRIPE_PAYMENT_LINK_YEARLY to a Stripe Payment Link and these buttons will go there. Until then they open a page that says nothing was charged.</p>
       </article>
@@ -107,7 +122,7 @@
     </form>
   </section>
 </main>
-<footer>© 2026 SunsetPing · Alerts send only when RESEND_API_KEY is set. It is not set in this build, so the cron logs the email and does not mail anyone.</footer>
+<footer>© 2026 SunsetPing · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · Alerts send only when RESEND_API_KEY is set. It is not set in this build, so the cron logs the email and does not mail anyone.</footer>
 <script src="/pro.js" defer></script>
 </body>
 </html>

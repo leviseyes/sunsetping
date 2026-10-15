@@ -178,6 +178,8 @@ export async function runAlerts(env, now = new Date(), deps = {}) {
         const html = renderEmail(action.score, {
           when: action.when,
           ranking: action.ranking,
+          plan: sub.plan === "pro" ? "pro" : "free",
+          shareUrl: `${base}/s/${encodeURIComponent(action.score.location)}`,
           unsubscribeUrl: `${base}/api/unsubscribe?token=${sub.unsubscribe_token}`,
         });
         const result = await send({ to: sub.email, subject: emailSubject(action.score, action.when), html });

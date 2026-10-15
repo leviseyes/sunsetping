@@ -21,12 +21,24 @@ function rankingBlock(ranking) {
   return `<p style="font-size:15px;color:#1f2937;margin:18px 0 8px"><b>Best of your spots tonight</b></p><ol style="margin:0 0 8px;padding-left:20px;color:#4b5563;font-size:15px">${items}</ol>`;
 }
 
+function upsellBlock(strong) {
+  if (strong) {
+    return `<p style="font-size:16px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>A night like this is why people get Pro.</b> An 8 or higher is worth leaving the house. Pro watches up to 10 places, ranks the best one, and can warn you the day before. <a href="https://sunsetping.com/pro" style="color:#c4541a">Get Pro yearly · $29, save 39%</a></p>`;
+  }
+  return `<p style="font-size:15px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>Watch more than one horizon.</b> Pro is 10 spots, sunrise alerts, a 7-day outlook, and a day-before heads-up. <a href="https://sunsetping.com/pro" style="color:#c4541a">Yearly is $29, save 39%</a></p>`;
+}
+
+function shareBlock(href, when) {
+  const label = when === "sunrise" ? "Share this sunrise forecast" : when === "tomorrow" ? "Share tomorrow's forecast" : "Share tonight's forecast";
+  return `<p style="font-size:15px;margin:12px 0 0"><a href="${escapeHtml(href)}" style="color:#c4541a">${label}</a></p>`;
+}
+
 /**
  * HTML email in the same shape as email_template.py.
  * `when` is "tonight" | "tomorrow" | "sunrise".
  * Pass unsubscribeUrl to replace the {{unsubscribe_url}} placeholder.
  */
-export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = "tonight", ranking = null } = {}) {
+export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = "tonight", ranking = null, plan = "free", shareUrl = "" } = {}) {
   const c = r.score >= 6 ? "#f97316" : "#64748b";
   const e = {
     date: escapeHtml(r.date),
@@ -47,6 +59,8 @@ export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = 
       ? "The color often starts about 15 minutes <i>before</i> the sun clears the horizon."
       : "Tip: the best color usually shows up 5–15 minutes <i>after</i> the sun drops.";
   const safeUrl = escapeHtml(unsubscribeUrl);
+  const share = shareUrl || `https://sunsetping.com/s/${encodeURIComponent(r.location)}`;
+  const extra = `${shareBlock(share, when)}${plan === "pro" ? "" : upsellBlock(when === "tonight" && Number(r.score) >= 8)}`;
   return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
 <table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
@@ -60,6 +74,7 @@ export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = 
 <p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">${e.reason}</p>
 ${viewingLine(r.viewing)}
 ${rankingBlock(ranking)}
+${extra}
 <p style="font-size:14px;color:#6f655d;margin:16px 0 0;line-height:1.5">${tip}</p>
 </td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
 You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
