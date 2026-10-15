@@ -9,6 +9,7 @@ account_id = "1a01a80affd778e3dc5812bbdcd5dc84"
 #   STRIPE_PAYMENT_LINK_MONTHLY     — Stripe Payment Link for Pro at $3.99/mo
 #   STRIPE_PAYMENT_LINK_YEARLY      — Stripe Payment Link for Pro at $29/yr
 #   STRIPE_PAYMENT_LINK             — optional fallback used when a plan-specific link is unset
+#   STRIPE_WEBHOOK_SECRET           — Stripe webhook signing secret (whsec_...) for POST /api/stripe/webhook
 #   PUBLIC_BASE_URL                 — optional, defaults to https://sunsetping.com
 
 [assets]

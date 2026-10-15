@@ -40,9 +40,57 @@ export function createDb(initial = {}) {
     subscribers: (initial.subscribers || []).map((s) => ({ ...s })),
     saved: (initial.saved || []).map((s) => ({ ...s })),
     sends: (initial.sends || []).map((s) => ({ ...s })),
+    stripeEvents: (initial.stripeEvents || []).map((s) => ({ ...s })),
     nextId: initial.nextId || 100,
   };
   const query = (sql, args, mode) => {
+    if (sql.includes("INSERT INTO stripe_events")) {
+      if (state.stripeEvents.some((e) => e.id === args[0])) return { success: true, meta: { changes: 0 } };
+      state.stripeEvents.push({ id: args[0], type: args[1] });
+      return { success: true, meta: { changes: 1 } };
+    }
+    if (sql.includes("FROM stripe_events")) {
+      const row = state.stripeEvents.find((e) => e.id === args[0]) || null;
+      return mode === "first" ? row : row ? [row] : [];
+    }
+    if (sql.includes("INSERT INTO subscribers") && sql.includes("stripe_customer_id")) {
+      state.subscribers.push({
+        id: ++state.nextId,
+        email: args[0],
+        location: args[1],
+        lat: null,
+        lon: null,
+        tz: null,
+        unsubscribe_token: args[2],
+        status: "active",
+        plan: "pro",
+        stripe_customer_id: args[3],
+        stripe_subscription_id: args[4],
+        score_threshold: null,
+        sunrise_alerts: 0,
+        day_before: 0,
+        lead_minutes: 180,
+      });
+      return { success: true, meta: { changes: 1 } };
+    }
+    if (sql.includes("SET plan='pro'")) {
+      const row = state.subscribers.find((s) => s.id === args[2]);
+      if (!row) return { success: true, meta: { changes: 0 } };
+      row.plan = "pro";
+      row.stripe_customer_id = args[0];
+      row.stripe_subscription_id = args[1];
+      return { success: true, meta: { changes: 1 } };
+    }
+    if (sql.includes("SET plan='free'")) {
+      let changes = 0;
+      for (const row of state.subscribers) {
+        if ((args[0] && row.stripe_customer_id === args[0]) || (args[1] && row.stripe_subscription_id === args[1])) {
+          row.plan = "free";
+          changes++;
+        }
+      }
+      return { success: true, meta: { changes } };
+    }
     if (sql.includes("INSERT INTO subscribers")) {
       const existing = state.subscribers.find((s) => s.email === args[0]);
       if (existing) {
@@ -105,7 +153,11 @@ export function createDb(initial = {}) {
       const rows = state.subscribers.filter((s) => s.status === "active");
       return mode === "first" ? rows[0] || null : rows;
     }
-    if (sql.includes("FROM subscribers") && sql.includes("email")) {
+    if (sql.includes("FROM subscribers") && sql.includes("stripe_customer_id =")) {
+      const rows = state.subscribers.filter((s) => (args[0] && s.stripe_customer_id === args[0]) || (args[1] && s.stripe_subscription_id === args[1]));
+      return mode === "first" ? rows[0] || null : rows;
+    }
+    if (sql.includes("FROM subscribers") && sql.includes("WHERE email")) {
       const rows = state.subscribers.filter((s) => s.email === args[0]);
       return mode === "first" ? rows[0] || null : rows;
     }

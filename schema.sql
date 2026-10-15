@@ -1,4 +1,4 @@
--- Full schema snapshot after migrations/0002_pro.sql.
+-- Full schema snapshot after migrations/0003_stripe.sql.
 -- Existing databases should apply the files in migrations/ (wrangler d1 migrations apply).
 -- This file is the greenfield equivalent, not a second migration.
 
@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS subscribers (
   score_threshold INTEGER CHECK (score_threshold IS NULL OR (score_threshold BETWEEN 1 AND 10)),
   sunrise_alerts INTEGER NOT NULL DEFAULT 0,
   day_before INTEGER NOT NULL DEFAULT 0,
-  lead_minutes INTEGER NOT NULL DEFAULT 180
+  lead_minutes INTEGER NOT NULL DEFAULT 180,
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT
 );
 
 CREATE TABLE IF NOT EXISTS saved_locations (
@@ -30,6 +32,15 @@ CREATE TABLE IF NOT EXISTS saved_locations (
 
 CREATE INDEX IF NOT EXISTS idx_saved_locations_subscriber ON saved_locations(subscriber_id);
 CREATE INDEX IF NOT EXISTS idx_subscribers_status ON subscribers(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_subscribers_stripe_customer
+  ON subscribers(stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_subscribers_stripe_subscription ON subscribers(stripe_subscription_id);
+
+CREATE TABLE IF NOT EXISTS stripe_events (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  received_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 
 CREATE TABLE IF NOT EXISTS alert_sends (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
