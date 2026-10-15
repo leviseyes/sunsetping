@@ -1,4 +1,4 @@
-import { rankScores, publicScore, scoreForecastDay, tzAbbrev, zonedWallToUtc } from "./scoring.js";
+import { rankScores, scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
 import { MAX_SPOTS, runAlerts } from "./alerts.js";
 import { checkoutPlaceholder, ogSvg, sharePage, simplePage } from "./pages.js";
@@ -26,16 +26,7 @@ async function readBody(req) {
 }
 
 function publicDay(scored) {
-  if (!scored) return null;
-  let tz = scored.tz;
-  if (!tz && scored.timezone && scored.sunsetIso) {
-    try {
-      tz = tzAbbrev(scored.timezone, zonedWallToUtc(scored.sunsetIso, scored.timezone));
-    } catch {
-      tz = scored.timezone;
-    }
-  }
-  return publicScore({ ...scored, tz });
+  return withZoneAbbrev(scored);
 }
 
 async function scoreQuery(input, days, fetchImpl) {
@@ -299,7 +290,7 @@ async function handleApi(req, url, env) {
 }
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url);
     try {
       if (url.pathname === "/lookup") {
@@ -317,7 +308,7 @@ export default {
         assetUrl.pathname = "/faq.html";
         return env.ASSETS.fetch(new Request(assetUrl, req));
       }
-      const growth = growthRoute(url, env);
+      const growth = await growthRoute(url, env, ctx);
       if (growth) return growth;
       if (url.pathname.startsWith("/api/")) {
         const handled = await handleApi(req, url, env);
@@ -341,6 +332,17 @@ export default {
       return env.ASSETS.fetch(req);
     } catch (err) {
       const status = err instanceof HttpError ? err.status : Number.isInteger(err?.status) ? err.status : 0;
+      const cityPath = url.pathname.replace(/\/$/, "") || "/";
+      if (cityPath.startsWith("/sunset/")) {
+        console.log(JSON.stringify({ event: "city_page_error", path: url.pathname, message: String(err?.message || err) }));
+        try {
+          const fallback = await growthRoute(url, env, ctx, { skipScore: true });
+          if (fallback) return fallback;
+        } catch (inner) {
+          console.log(JSON.stringify({ event: "city_page_fallback_error", path: url.pathname, message: String(inner?.message || inner) }));
+        }
+        return simplePage("Tonight's sunset", "The forecast will be back shortly.", 200);
+      }
       if (status) {
         if (url.pathname.startsWith("/api/")) return json({ error: err.message }, status);
         return simplePage("Hmm…", err.message, status);
