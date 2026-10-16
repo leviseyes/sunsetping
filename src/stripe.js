@@ -195,9 +195,82 @@ export async function stripeWebhook(req, env) {
 }
 
 export function appendPrefilledEmail(url, email) {
-  const normalized = String(email || "").trim().toLowerCase();
-  if (!EMAIL_RE.test(normalized) || normalized.length > 254) return url;
+  const normalized = checkoutCustomerEmail(email);
+  if (!normalized) return url;
   const next = new URL(url);
   next.searchParams.set("prefilled_email", normalized);
   return next.toString();
+}
+
+/** Restricted key: Checkout Sessions write only. Set with `wrangler secret put STRIPE_SECRET_KEY`. */
+export const CHECKOUT_PRICES = {
+  monthly: "price_1UQhIqGTgTEb9hzMidkH62bY",
+  yearly: "price_1UQhIrGTgTEb9hzM87TinKO1",
+};
+
+export const CHECKOUT_SUCCESS_URL = "https://sunsetping.com/pro?welcome=1";
+export const CHECKOUT_CANCEL_URL = "https://sunsetping.com/pro?canceled=1";
+
+export function checkoutCustomerEmail(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!EMAIL_RE.test(normalized) || normalized.length > 254) return "";
+  return normalized;
+}
+
+/** Return path on sunsetping.com, or the Pro page when the referer is somewhere else. */
+export function checkoutCancelUrl(referer) {
+  try {
+    const from = new URL(String(referer || ""));
+    const host = from.hostname.toLowerCase();
+    if (host !== "sunsetping.com" && host !== "www.sunsetping.com") return CHECKOUT_CANCEL_URL;
+    if (from.protocol !== "https:" && from.protocol !== "http:") return CHECKOUT_CANCEL_URL;
+    if (!from.pathname || from.pathname.startsWith("/api/")) return CHECKOUT_CANCEL_URL;
+    const next = new URL(`https://sunsetping.com${from.pathname}`);
+    for (const [key, value] of from.searchParams) {
+      if (key !== "canceled" && key !== "welcome") next.searchParams.append(key, value);
+    }
+    next.searchParams.set("canceled", "1");
+    return next.toString();
+  } catch {
+    return CHECKOUT_CANCEL_URL;
+  }
+}
+
+/**
+ * Create a subscription Checkout Session. Returns the hosted URL, or null when
+ * STRIPE_SECRET_KEY is unset. Throws when Stripe rejects the request.
+ */
+export async function createCheckoutSession({ env, plan, email, cancelUrl, fetchImpl = fetch }) {
+  const key = env?.STRIPE_SECRET_KEY;
+  if (!key || typeof key !== "string") return null;
+  const body = new URLSearchParams();
+  body.set("mode", "subscription");
+  body.set("line_items[0][price]", plan === "yearly" ? CHECKOUT_PRICES.yearly : CHECKOUT_PRICES.monthly);
+  body.set("line_items[0][quantity]", "1");
+  body.set("success_url", CHECKOUT_SUCCESS_URL);
+  body.set("cancel_url", cancelUrl || CHECKOUT_CANCEL_URL);
+  body.set("allow_promotion_codes", "true");
+  const customer = checkoutCustomerEmail(email);
+  if (customer) body.set("customer_email", customer);
+  const res = await fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${key}`,
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`Stripe checkout failed (${res.status}) ${detail.slice(0, 180)}`.trim());
+  }
+  const data = await res.json().catch(() => ({}));
+  let sessionUrl;
+  try {
+    sessionUrl = new URL(String(data?.url || ""));
+  } catch {
+    throw new Error("Stripe checkout returned no url");
+  }
+  if (sessionUrl.protocol !== "https:") throw new Error("Stripe checkout returned no url");
+  return sessionUrl.toString();
 }
