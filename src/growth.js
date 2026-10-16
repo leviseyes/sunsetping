@@ -1,5 +1,6 @@
 import { CITIES, cityBySlug, nearbyCities } from "./cities.js";
 import { INDEXNOW_KEY } from "./indexnow.js";
+import { renderOgResponse } from "./og-card.js";
 import { fetchForecast, resolvePlace } from "./openmeteo.js";
 import { simplePage } from "./pages.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
@@ -19,8 +20,14 @@ function origin(env) {
   return (env?.PUBLIC_BASE_URL || SITE).replace(/\/$/, "");
 }
 
-function head({ title, description, canonical, jsonLd }) {
+function head({ title, description, canonical, jsonLd, image }) {
   const ld = jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, "\\u003c")}</script>` : "";
+  const ogImage = image || OG_IMAGE;
+  const imageMeta = image
+    ? `<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">`
+    : "";
   return `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
@@ -30,11 +37,12 @@ function head({ title, description, canonical, jsonLd }) {
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:url" content="${esc(canonical)}">
-<meta property="og:image" content="${OG_IMAGE}">
+<meta property="og:image" content="${esc(ogImage)}">
+${imageMeta}
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(description)}">
-<meta name="twitter:image" content="${OG_IMAGE}">
+<meta name="twitter:image" content="${esc(ogImage)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -147,6 +155,39 @@ const SCORE_SCRIPT = `<script>
   if (zone) {
     try { zone.value = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (err) {}
   }
+  var share = document.querySelector("[data-share-url]");
+  var shareButton = document.getElementById("share-score");
+  if (share && shareButton) {
+    var fallbacks = share.querySelector(".share-fallbacks");
+    shareButton.addEventListener("click", function () {
+      var payload = {
+        title: share.getAttribute("data-share-title") || document.title,
+        text: share.getAttribute("data-share-text") || "",
+        url: share.getAttribute("data-share-url") || location.href,
+      };
+      function showFallbacks() { if (fallbacks) fallbacks.hidden = false; }
+      if (navigator.share) {
+        navigator.share(payload).catch(function (err) {
+          if (err && err.name === "AbortError") return;
+          showFallbacks();
+        });
+      } else {
+        showFallbacks();
+      }
+    });
+    var copy = share.querySelector("[data-copy-link]");
+    if (copy) {
+      copy.addEventListener("click", function () {
+        var url = share.getAttribute("data-share-url") || location.href;
+        var done = function () { copy.textContent = "Link copied"; };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url).then(done).catch(function () { window.prompt("Copy this link", url); });
+        } else {
+          window.prompt("Copy this link", url);
+        }
+      });
+    }
+  }
 })();
 </script>`;
 
@@ -211,10 +252,15 @@ function cityHtml(env, city, score) {
     `<a href="/sunset/${esc(other.slug)}">${esc(other.city)}</a>`
   ).join("");
   const spots = city.spots.map((spot) => `<li>${esc(spot)}</li>`).join("");
+  const shareText = score
+    ? `Tonight's sunset in ${city.city}: ${score.score}/10`
+    : `Tonight's sunset in ${city.city}`;
+  const shareHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(canonical)}`;
   return `<!doctype html><html lang="en"><head>${head({
     title: score ? cityPageTitle(city.city, score) : `${question} · SunsetPing`,
     description,
     canonical,
+    image: `${base}/og/${city.slug}.png`,
     jsonLd: cityJsonLd({ base, canonical, city, score, description }),
   })}</head>
 <body><main class="wrap doc">
@@ -228,6 +274,13 @@ ${liveScoreHtml(city, score)}
 <h2>Where people stand</h2>
 <ul>${spots}</ul>
 <p><a href="/s/${esc(encodeURIComponent(city.query))}">Share tonight's forecast for ${esc(city.city)}</a></p>
+<div class="share-score" data-share-url="${esc(canonical)}" data-share-title="${esc(question)}" data-share-text="${esc(shareText)}">
+<button type="button" class="btn" id="share-score">Share tonight's score</button>
+<p class="share-fallbacks" hidden>
+<button type="button" data-copy-link>Copy link</button>
+<a href="${esc(shareHref)}" target="_blank" rel="noopener">Post on X</a>
+</p>
+</div>
 </section>
 <section class="panel" data-welcome-host>
 <h2>Free alert for ${esc(city.city)}</h2>
@@ -393,8 +446,41 @@ export function sitemapXml(env) {
   });
 }
 
+export async function cityOg(env, slug, ctx) {
+  const city = cityBySlug(String(slug || "").toLowerCase());
+  if (!city) return simplePage("No score card", "That sunset city isn't in the guide. Try the city index.", 404);
+  const cache = edgeCache();
+  const cacheKey = new Request(`https://sunsetping.com/og/${city.slug}.png`, { method: "GET" });
+  if (cache) {
+    const hit = await cache.match(cacheKey).catch(() => null);
+    if (hit) return hit;
+  }
+  let score = null;
+  try {
+    score = await loadTonightWithDeadline(city.query, scoreTimeoutMs(env));
+  } catch (err) {
+    console.log(JSON.stringify({ event: "og_score_fallback", slug: city.slug, message: String(err?.message || err) }));
+  }
+  const response = await renderOgResponse({
+    city: city.city,
+    score: score?.score ?? null,
+    verdict: score?.verdict || "",
+    sunset: score?.sunset || "",
+  }, { live: Boolean(score) });
+  if (score && cache) {
+    try {
+      await remember(ctx, cache.put(cacheKey, response.clone()));
+    } catch (err) {
+      console.log(JSON.stringify({ event: "og_cache_put_failed", message: String(err?.message || err) }));
+    }
+  }
+  return response;
+}
+
 export async function growthRoute(url, env, ctx, options = {}) {
   const path = url.pathname.replace(/\/$/, "") || "/";
+  const ogMatch = path.match(/^\/og\/([^/]+)\.png$/i);
+  if (ogMatch) return cityOg(env, decodeURIComponent(ogMatch[1]), ctx);
   if (path === `/${INDEXNOW_KEY}.txt`) return indexNowKeyResponse();
   if (path === "/sitemap.xml") return sitemapXml(env);
   if (path === "/sunset") return sunsetIndex(env);

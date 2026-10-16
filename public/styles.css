@@ -167,6 +167,10 @@ h1 { font-size: clamp(56px, 7vw, 96px); line-height: 0.92; margin: 0 0 18px; max
 .share-row { margin: 22px 0 0; }
 .share-url { color: var(--ember); font-weight: 650; word-break: break-all; }
 .error-banner { background: #fff; color: #9f1239; border-radius: 18px; padding: 16px 18px; }
+.share-score { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: center; margin-top: 16px; }
+.share-fallbacks { display: flex; gap: 16px; align-items: center; margin: 0; }
+.share-fallbacks[hidden] { display: none; }
+.share-fallbacks button, .share-fallbacks a { color: var(--ember); background: none; border: 0; padding: 0; font-weight: 650; cursor: pointer; }
 .checkout-note {
   position: sticky; top: calc(var(--header-h) + 8px); z-index: 40;
   margin: 12px auto; width: min(720px, calc(100% - 32px));

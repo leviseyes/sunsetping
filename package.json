@@ -8,5 +8,9 @@
   },
   "devDependencies": {
     "wrangler": "^3.114.17"
+  },
+  "dependencies": {
+    "@resvg/resvg-wasm": "^2.6.2",
+    "satori": "^0.10.13"
   }
 }
