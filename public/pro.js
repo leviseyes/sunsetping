@@ -48,6 +48,14 @@ document.querySelectorAll('a[href*="/api/checkout"]').forEach((link) => {
   link.addEventListener("click", prefillCheckoutLinks);
 });
 
+if (new URLSearchParams(location.search).get("canceled") === "1") {
+  const note = document.createElement("p");
+  note.className = "checkout-note";
+  note.setAttribute("role", "status");
+  note.textContent = "No worries. Nothing was charged. Pro will be here when you want it.";
+  document.body.prepend(note);
+}
+
 document.getElementById("outlook-form")?.addEventListener("submit", (event) => {
   event.preventDefault();
   const q = new FormData(event.target).get("q").trim();

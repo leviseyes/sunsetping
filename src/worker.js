@@ -4,7 +4,7 @@ import { MAX_SPOTS, runAlerts } from "./alerts.js";
 import { authorizeCron, issueError, prepareIssue, runWeeklyNewsletter } from "./newsletter.js";
 import { checkoutPlaceholder, ogSvg, proCheckoutPaths, sharePage, simplePage, welcomeOfferHtml, welcomePage } from "./pages.js";
 import { deliverWelcome, loadTonight } from "./welcome.js";
-import { appendPrefilledEmail, stripeWebhook } from "./stripe.js";
+import { appendPrefilledEmail, checkoutCancelUrl, createCheckoutSession, stripeWebhook } from "./stripe.js";
 import { growthRoute } from "./growth.js";
 
 const json = (o, status = 200, extra = {}) =>
@@ -299,7 +299,21 @@ async function handleApi(req, url, env, ctx) {
   if (url.pathname === "/api/checkout") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
     const plan = url.searchParams.get("plan") === "yearly" ? "yearly" : "monthly";
-    const link = stripeUrl(env, plan, url.searchParams.get("email") || "");
+    const email = url.searchParams.get("email") || "";
+    if (env.STRIPE_SECRET_KEY) {
+      try {
+        const sessionUrl = await createCheckoutSession({
+          env,
+          plan,
+          email,
+          cancelUrl: checkoutCancelUrl(req.headers.get("referer")),
+        });
+        if (sessionUrl) return Response.redirect(sessionUrl, 303);
+      } catch (err) {
+        console.log(JSON.stringify({ event: "stripe_checkout_session_error", message: String(err?.message || err) }));
+      }
+    }
+    const link = stripeUrl(env, plan, email);
     if (!link.url) return checkoutPlaceholder({ plan, envName: link.envName });
     return Response.redirect(link.url, 302);
   }

@@ -103,6 +103,14 @@ document.querySelectorAll('a[href*="/api/checkout"]').forEach((link) => {
   link.addEventListener("click", prefillCheckoutLinks);
 });
 
+if (new URLSearchParams(location.search).get("canceled") === "1") {
+  const note = document.createElement("p");
+  note.className = "checkout-note";
+  note.setAttribute("role", "status");
+  note.textContent = "No worries. Nothing was charged. Pro will be here when you want it.";
+  document.body.prepend(note);
+}
+
 function showSignupError(form, message) {
   let note = form.querySelector(".error-banner");
   if (!note) {

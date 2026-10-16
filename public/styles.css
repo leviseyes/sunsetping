@@ -167,6 +167,12 @@ h1 { font-size: clamp(56px, 7vw, 96px); line-height: 0.92; margin: 0 0 18px; max
 .share-row { margin: 22px 0 0; }
 .share-url { color: var(--ember); font-weight: 650; word-break: break-all; }
 .error-banner { background: #fff; color: #9f1239; border-radius: 18px; padding: 16px 18px; }
+.checkout-note {
+  position: sticky; top: calc(var(--header-h) + 8px); z-index: 40;
+  margin: 12px auto; width: min(720px, calc(100% - 32px));
+  background: var(--paper); color: var(--ink); text-align: center;
+  border-radius: 18px; padding: 14px 18px; box-shadow: var(--shadow);
+}
 .signup-block { padding: 56px 0 12px; }
 .signup-block h2 { font-size: 44px; margin: 0 0 8px; }
 .signup input { background: #fff; border-radius: 14px; border: 1px solid var(--line); flex: 1 1 180px; }
