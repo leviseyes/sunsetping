@@ -103,6 +103,58 @@ document.querySelectorAll('a[href*="/api/checkout"]').forEach((link) => {
   link.addEventListener("click", prefillCheckoutLinks);
 });
 
+function showSignupError(form, message) {
+  let note = form.querySelector(".error-banner");
+  if (!note) {
+    note = document.createElement("p");
+    note.className = "error-banner";
+    form.append(note);
+  }
+  note.textContent = message;
+}
+
+async function submitSignup(form) {
+  const button = form.querySelector('button[type="submit"]');
+  const label = button?.textContent || "";
+  form.querySelector(".error-banner")?.remove();
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Sending…";
+  }
+  try {
+    const body = Object.fromEntries(new FormData(form));
+    const res = await fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data.error || "Could not subscribe.");
+    const host = form.closest("[data-welcome-host]") || form.closest(".signup-block") || form;
+    host.classList.remove("panel");
+    host.innerHTML = data.offerHtml || "";
+    const heading = host.querySelector("h2");
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus();
+    }
+    host.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (err) {
+    if (button) {
+      button.disabled = false;
+      button.textContent = label;
+    }
+    showSignupError(form, err.message || "Could not subscribe.");
+  }
+}
+
+document.querySelectorAll("form[data-signup]").forEach((form) => {
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    submitSignup(form);
+  });
+});
+
 document.getElementById("geo")?.addEventListener("click", () => {
   if (!navigator.geolocation) {
     resultEl.innerHTML = `<p class="error-banner">This browser can't share a location. Type a city instead.</p>`;

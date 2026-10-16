@@ -229,10 +229,10 @@ ${liveScoreHtml(city, score)}
 <ul>${spots}</ul>
 <p><a href="/s/${esc(encodeURIComponent(city.query))}">Share tonight's forecast for ${esc(city.city)}</a></p>
 </section>
-<section class="panel">
+<section class="panel" data-welcome-host>
 <h2>Free alert for ${esc(city.city)}</h2>
 <p>One place, the same day, before the color fades. Unsubscribe any time.</p>
-<form class="stack" action="/api/subscribe" method="post">
+<form class="stack" action="/api/subscribe" method="post" data-signup>
 <label class="sr-only" for="email">Email</label>
 <input id="email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
 <label class="sr-only" for="location">City</label>
@@ -243,7 +243,7 @@ ${liveScoreHtml(city, score)}
 </section>
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/sunset">All cities</a></nav>
-</main>${footer()}${SCORE_SCRIPT}</body></html>`;
+</main>${footer()}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
 }
 
 function cityResponse(html, score) {
