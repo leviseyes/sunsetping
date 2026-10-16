@@ -1,5 +1,15 @@
+import { PRO_PERKS } from "./email.js";
+
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+export function proCheckoutPaths(email) {
+  const q = encodeURIComponent(String(email || "").trim().toLowerCase());
+  return {
+    yearly: `/api/checkout?plan=yearly&email=${q}`,
+    monthly: `/api/checkout?plan=monthly&email=${q}`,
+  };
 }
 
 const SHELL_HEAD = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -116,6 +126,49 @@ export function ogSvg({ score = "–", location = "Tonight's sunset", verdict = 
 </svg>`;
   return new Response(svg, {
     headers: { "content-type": "image/svg+xml; charset=utf-8", "cache-control": "public, max-age=600" },
+  });
+}
+
+function tonightLine(tonight) {
+  if (!tonight || tonight.score == null || tonight.score === "") return "";
+  const tz = tonight.tz ? ` ${esc(tonight.tz)}` : "";
+  return `<p class="welcome-tonight"><span class="welcome-score">${esc(tonight.score)}<span>/10</span></span><span class="welcome-sky">${esc(tonight.verdict || "")} · sunset <b>${esc(tonight.sunset || "")}</b>${tz}</span></p>`;
+}
+
+export function welcomeOfferHtml({ location, email, tonight = null } = {}) {
+  const links = proCheckoutPaths(email);
+  const perks = PRO_PERKS.map((line) => `<li>${esc(line)}</li>`).join("");
+  return `<div class="welcome-offer" role="status">
+<p class="kicker">Free alerts</p>
+<h2>You're in. We'll email you before sunset in ${esc(location)}.</h2>
+<p class="lede">The same-day note arrives about 3 hours before sunset. Free covers this one place.</p>
+${tonightLine(tonight)}
+<article class="welcome-pro">
+<p class="eyebrow">Pro</p>
+<h3>Catch more than one horizon.</h3>
+<ul>${perks}</ul>
+<div class="actions">
+<a class="btn btn-yearly" href="${esc(links.yearly)}">Best value · Yearly $29<span>$2.42/mo, save 39%</span></a>
+<a class="btn btn-monthly" href="${esc(links.monthly)}">Monthly · $3.99</a>
+</div>
+</article>
+<p class="welcome-pass"><a href="/">No thanks, free is fine</a></p>
+</div>`;
+}
+
+export function welcomePage({ location, email, tonight = null } = {}) {
+  const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>You're in · SunsetPing</title>
+<meta name="robots" content="noindex"></head>
+<body class="welcome">${topbar()}
+<main class="welcome-main">${welcomeOfferHtml({ location, email, tonight })}</main>
+</body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "private, no-store",
+      "x-robots-tag": "noindex",
+    },
   });
 }
 

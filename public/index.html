@@ -60,10 +60,10 @@
     <div id="result" class="result-slot" aria-live="polite">
       <p class="empty">A score from 1 to 10, the hour to be outside, and why the sky looks that way.</p>
     </div>
-    <div class="signup-block" id="signup">
+    <div class="signup-block" id="signup" data-welcome-host>
       <h2>Want this before the color fades?</h2>
       <p class="lede">Free is one location and a same-day alert. Unsubscribe anytime.</p>
-      <form class="signup" action="/api/subscribe" method="post">
+      <form class="signup" action="/api/subscribe" method="post" data-signup>
         <label class="sr-only" for="email">Email</label>
         <input id="email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
         <label class="sr-only" for="location">City or ZIP for alerts</label>

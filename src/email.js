@@ -87,6 +87,62 @@ export function emailSubject(r, when = "tonight") {
   return `Tonight's sunset in ${r.location}: ${r.score}/10`;
 }
 
+export const PRO_PERKS = [
+  "Up to 10 saved spots",
+  "Sunrise alerts",
+  "7-day outlook",
+  "Day-before alerts",
+  "Great-sunsets-only",
+  "Best-spot ranking",
+];
+
+export function welcomeSubject(location) {
+  const place = String(location || "your place").replace(/[\r\n]+/g, " ").slice(0, 80);
+  return `You're in: sunset alerts for ${place}`;
+}
+
+/**
+ * First-signup note. Same cream card as the daily alert.
+ * Yearly checkout is the first link. Omit the score block when tonight is missing.
+ */
+export function renderWelcomeEmail({ location, tonight = null, yearlyUrl, monthlyUrl, unsubscribeUrl }) {
+  const place = escapeHtml(location);
+  const safeUrl = escapeHtml(unsubscribeUrl);
+  const hasScore = tonight && tonight.score != null && tonight.score !== "";
+  const tone = hasScore && Number(tonight.score) >= 6 ? "#f97316" : "#64748b";
+  const kicker = hasScore && tonight.date ? escapeHtml(String(tonight.date).toUpperCase()) : "WELCOME";
+  const scoreBlock = hasScore
+    ? `<div style="font-size:92px;line-height:.9;letter-spacing:-2px;margin:18px 0 6px;font-family:Georgia,'Times New Roman',serif">${escapeHtml(tonight.score)}<span style="font-size:28px;color:#6f655d;letter-spacing:0">/10</span></div>
+<div style="height:8px;width:72px;border-radius:99px;background:${tone};margin:10px 0 14px"></div>
+<div style="font-size:22px;font-family:Georgia,'Times New Roman',serif">${escapeHtml(tonight.verdict || "")}</div>`
+    : `<div style="font-size:40px;line-height:1.05;margin:18px 0 0;font-family:Georgia,'Times New Roman',serif">You're in.</div>`;
+  const tonightLine = hasScore
+    ? `<p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">Tonight's sunset in <b>${place}</b> is at <b style="color:${tone}">${escapeHtml(tonight.sunset || "")}</b>${tonight.tz ? ` ${escapeHtml(tonight.tz)}` : ""}.</p>`
+    : "";
+  const reason = hasScore && tonight.reason
+    ? `<p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">${escapeHtml(tonight.reason)}</p>`
+    : "";
+  const perks = PRO_PERKS.map((line) => `<li style="margin:0 0 4px">${escapeHtml(line)}</li>`).join("");
+  return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
+<table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
+<tr><td style="padding:36px 36px 8px;font-family:Helvetica,Arial,sans-serif">
+<div style="font-size:12px;letter-spacing:3px;color:#6f655d">SUNSETPING · ${kicker}</div>
+${scoreBlock}</td></tr>
+<tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
+<p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">You're in. We'll email you before sunset in <b>${place}</b>.</p>
+<p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">The same-day note arrives about 3 hours before sunset. Free covers this one place.</p>
+${tonightLine}${reason}
+<p style="font-size:16px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>Pro adds</b></p>
+<ul style="margin:0 0 16px;padding-left:20px;color:#4b5563;font-size:15px">${perks}</ul>
+<p style="margin:0 0 10px"><a href="${escapeHtml(yearlyUrl)}" style="display:inline-block;background:#1c1612;color:#fff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700">Yearly · $29 · $2.42/mo, save 39%</a></p>
+<p style="margin:0 0 8px"><a href="${escapeHtml(monthlyUrl)}" style="color:#c4541a">Monthly · $3.99</a></p>
+<p style="font-size:14px;color:#6f655d;margin:12px 0 0;line-height:1.5">Free stays free. No charge unless you choose Pro.</p>
+</td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
+You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
+</table></td></tr></table></body></html>`;
+}
+
 function clean(value) {
   return String(value ?? "").trim();
 }

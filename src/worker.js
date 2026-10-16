@@ -2,7 +2,8 @@ import { rankScores, scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
 import { MAX_SPOTS, runAlerts } from "./alerts.js";
 import { authorizeCron, issueError, prepareIssue, runWeeklyNewsletter } from "./newsletter.js";
-import { checkoutPlaceholder, ogSvg, sharePage, simplePage } from "./pages.js";
+import { checkoutPlaceholder, ogSvg, proCheckoutPaths, sharePage, simplePage, welcomeOfferHtml, welcomePage } from "./pages.js";
+import { deliverWelcome, loadTonight } from "./welcome.js";
 import { appendPrefilledEmail, stripeWebhook } from "./stripe.js";
 import { growthRoute } from "./growth.js";
 
@@ -50,7 +51,7 @@ function inputFromUrl(url) {
   return { q: url.searchParams.get("q") || "" };
 }
 
-async function subscribe(req, env) {
+async function subscribe(req, env, ctx) {
   const body = await readBody(req);
   const asJson = wantsJson(req);
   const fail = (message, status = 400) => (asJson ? json({ ok: false, error: message }, status) : simplePage("Hmm…", message, status));
@@ -67,12 +68,25 @@ async function subscribe(req, env) {
   }
   const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
   const tz = place.timezone || body.tz || null;
+  const prior = await env.DB.prepare("SELECT id FROM subscribers WHERE email = ?1").bind(email).first();
+  const isNew = !prior;
   await env.DB.prepare(
     `INSERT INTO subscribers (email, location, lat, lon, tz, unsubscribe_token, status) VALUES (?1,?2,?3,?4,?5,?6,'active')
      ON CONFLICT(email) DO UPDATE SET location=?2, lat=?3, lon=?4, tz=?5, status='active'`
   ).bind(email, place.name, place.latitude, place.longitude, tz, token).run();
-  const message = `We'll email you before sunset in ${place.name}.`;
-  return asJson ? json({ ok: true, location: place.name }) : simplePage("You're in!", message);
+  const row = await env.DB.prepare(
+    "SELECT id, email, location, unsubscribe_token FROM subscribers WHERE email = ?1"
+  ).bind(email).first();
+  const tonight = await loadTonight(place);
+  const checkout = proCheckoutPaths(email);
+  const offer = { location: place.name, email, tonight };
+  if (isNew && row?.id) {
+    const task = deliverWelcome({ env, subscriber: { ...row, location: place.name }, tonight });
+    if (typeof ctx?.waitUntil === "function") ctx.waitUntil(task);
+    else await task;
+  }
+  if (asJson) return json({ ok: true, location: place.name, tonight, checkout, offerHtml: welcomeOfferHtml(offer) });
+  return welcomePage(offer);
 }
 
 async function unsubscribe(url, env) {
@@ -153,7 +167,7 @@ async function rankInputs(spots) {
   return { best: ranking[0], ranking, errors, feature: "best-spot-tonight", plan: "pro" };
 }
 
-async function handleApi(req, url, env) {
+async function handleApi(req, url, env, ctx) {
   if (url.pathname === "/api/stripe/webhook") return stripeWebhook(req, env);
 
   if (url.pathname === "/api/score") {
@@ -197,7 +211,7 @@ async function handleApi(req, url, env) {
 
   if (url.pathname === "/api/subscribe") {
     if (req.method !== "POST") return json({ error: "POST only" }, 405);
-    return subscribe(req, env);
+    return subscribe(req, env, ctx);
   }
   if (url.pathname === "/api/unsubscribe") return unsubscribe(url, env);
 
@@ -325,7 +339,7 @@ export default {
       const growth = await growthRoute(url, env, ctx);
       if (growth) return growth;
       if (url.pathname.startsWith("/api/")) {
-        const handled = await handleApi(req, url, env);
+        const handled = await handleApi(req, url, env, ctx);
         if (handled) return handled;
         return json({ error: "Not found" }, 404);
       }
