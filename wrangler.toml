@@ -44,3 +44,13 @@ binding = "DB"
 database_name = "sunsetping"
 database_id = "e838bc78-00f2-432f-a0a0-48afcc0c4a77"
 migrations_dir = "migrations"
+
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true
+
+[[rules]]
+type = "Data"
+globs = ["**/*.ttf"]
+fallthrough = true
