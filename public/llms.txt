@@ -16,7 +16,7 @@ The score is a whole number from 1 to 10. It uses the hour around sunset and loo
 - 4 or 5: Maybe a quick peek.
 - 3 or below: Probably skip tonight.
 
-The live score for any city is on that city's page or from the homepage search. Do not invent a score. Fetch the page or call GET https://sunsetping.com/api/score?q=CITY
+The live score for any city is in that city's page HTML (sunset time, golden hour, and the 1–10 score), and on the homepage search. Do not invent a score. Fetch the page or call GET https://sunsetping.com/api/score?q=CITY
 
 ## Pricing
 
@@ -30,7 +30,7 @@ The live score for any city is on that city's page or from the homepage search. 
 - [Home](https://sunsetping.com/): check tonight's sunset
 - [FAQ](https://sunsetping.com/faq): what it is, how scoring works, free versus Pro, pricing
 - [City index](https://sunsetping.com/sunset): 50 city forecast pages
-- [Example city](https://sunsetping.com/sunset/sedona): Will tonight's sunset be good in Sedona?
+- [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, and tonight's score in the HTML
 - [Pro](https://sunsetping.com/pro): yearly plan is the default offer
 - [Sitemap](https://sunsetping.com/sitemap.xml)
 

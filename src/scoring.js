@@ -313,6 +313,20 @@ export function publicScore(scored) {
   return out;
 }
 
+/** Public score plus a short zone label (CDT), matching GET /api/score. */
+export function withZoneAbbrev(scored) {
+  if (!scored) return null;
+  let tz = scored.tz;
+  if (!tz && scored.timezone && scored.sunsetIso) {
+    try {
+      tz = tzAbbrev(scored.timezone, zonedWallToUtc(scored.sunsetIso, scored.timezone));
+    } catch {
+      tz = scored.timezone;
+    }
+  }
+  return publicScore({ ...scored, tz });
+}
+
 export function rankScores(scores) {
   return [...scores]
     .filter((s) => s && Number.isFinite(s.score))

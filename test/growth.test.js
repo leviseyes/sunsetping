@@ -5,7 +5,7 @@ import { runAlerts } from "../src/alerts.js";
 import { CITIES } from "../src/cities.js";
 import { renderEmail } from "../src/email.js";
 import worker from "../src/worker.js";
-import { CLEAR, PERFECT, createDb, day, flatForecast, testEnv } from "./fixtures.js";
+import { CLEAR, PERFECT, createDb, day, flatForecast, testEnv, withFetch } from "./fixtures.js";
 
 const HOTSPOTS = ["sedona", "malibu", "key-west", "maui", "big-sur"];
 
@@ -49,23 +49,29 @@ test("sunset index and city pages are crawlable HTML", async () => {
   assert.match(indexHtml, /rel="canonical" href="https:\/\/sunsetping.com\/sunset"/);
   for (const city of CITIES) assert.match(indexHtml, new RegExp(`href="/sunset/${city.slug}"`));
 
-  const page = await worker.fetch(new Request("https://sunsetping.com/sunset/Sedona"), env);
-  assert.equal(page.status, 200);
-  const html = await page.text();
-  assert.match(html, /<title>Will tonight&#39;s sunset be good in Sedona\? · SunsetPing<\/title>/);
-  assert.match(html, /<h1>Will tonight&#39;s sunset be good in Sedona\?<\/h1>/);
-  assert.match(html, /rel="canonical" href="https:\/\/sunsetping.com\/sunset\/sedona"/);
-  assert.match(html, /property="og:title"/);
-  assert.match(html, /name="twitter:card" content="summary_large_image"/);
-  assert.match(html, /Airport Mesa/);
-  assert.match(html, /id="live-score"[^>]*data-query="Sedona, Arizona"/);
-  assert.match(html, /fetch\("\/api\/score\?q="/);
-  assert.match(html, /name="location" value="Sedona, Arizona"/);
-  assert.match(html, /action="\/api\/subscribe"/);
-  assert.match(html, /href="\/sunset\/flagstaff"/);
-  assert.match(html, /href="\/sunset\/phoenix"/);
-  assert.match(html, /href="\/sunset\/grand-canyon"/);
-  assert.match(html, /href="\/s\/Sedona%2C%20Arizona"/);
+  await withFetch(async () => {
+    throw new Error("offline");
+  }, async () => {
+    const page = await worker.fetch(new Request("https://sunsetping.com/sunset/Sedona"), env);
+    assert.equal(page.status, 200);
+    const html = await page.text();
+    assert.match(html, /<title>Will tonight&#39;s sunset be good in Sedona\? · SunsetPing<\/title>/);
+    assert.match(html, /<h1>Will tonight&#39;s sunset be good in Sedona\?<\/h1>/);
+    assert.match(html, /rel="canonical" href="https:\/\/sunsetping.com\/sunset\/sedona"/);
+    assert.match(html, /property="og:title"/);
+    assert.match(html, /name="twitter:card" content="summary_large_image"/);
+    assert.match(html, /Airport Mesa/);
+    assert.match(html, /id="live-score"[^>]*data-query="Sedona, Arizona"/);
+    assert.match(html, /Checking tonight's sky in Sedona/);
+    assert.match(html, /fetch\("\/api\/score\?q="/);
+    assert.match(html, /name="location" value="Sedona, Arizona"/);
+    assert.match(html, /action="\/api\/subscribe"/);
+    assert.match(html, /href="\/sunset\/flagstaff"/);
+    assert.match(html, /href="\/sunset\/phoenix"/);
+    assert.match(html, /href="\/sunset\/grand-canyon"/);
+    assert.match(html, /href="\/s\/Sedona%2C%20Arizona"/);
+    assert.doesNotMatch(page.headers.get("cache-control"), /s-maxage/);
+  });
 
   const missing = await worker.fetch(new Request("https://sunsetping.com/sunset/not-a-city"), env);
   assert.equal(missing.status, 404);
@@ -84,6 +90,18 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
   }
   for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc>`));
   assert.equal(xml.match(/<loc>/g).length, 54);
+  const lastmod = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length);
+  for (const city of CITIES) {
+    assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc><lastmod>${lastmod}</lastmod>`));
+  }
+  assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/<\/loc><lastmod>/);
+  assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/sunset<\/loc><lastmod>/);
 });
 
 test("robots, llms.txt, and the FAQ state the product in plain language", async () => {
@@ -121,6 +139,8 @@ test("homepage and pro page carry the requested structured data", () => {
   assert.match(home, /"@type":"Organization"/);
   assert.match(home, /"@type":"FAQPage"/);
   assert.match(home, /id="faq"/);
+  assert.match(home, /id="cities"/);
+  for (const city of CITIES) assert.match(home, new RegExp(`href="/sunset/${city.slug}"`));
   const pro = readPublic("pro.html");
   assert.match(pro, /rel="canonical" href="https:\/\/sunsetping.com\/pro"/);
   assert.match(pro, /"@type":"Product"/);
