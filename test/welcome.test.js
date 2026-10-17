@@ -83,6 +83,8 @@ test("HTML signup returns the Pro offer with both checkout links", async () => {
     assert.match(html, /6:42 PM/);
     assert.match(html, YEARLY);
     assert.match(html, MONTHLY);
+    assert.match(html, /href="\/api\/checkout\?plan=yearly&amp;email=ada%40sunset\.test" rel="nofollow"/);
+    assert.match(html, /href="\/api\/checkout\?plan=monthly&amp;email=ada%40sunset\.test" rel="nofollow"/);
     assert.ok(html.indexOf("plan=yearly") < html.indexOf("plan=monthly"));
     assert.match(html, /\$2\.42\/mo, save 39%/);
     assert.match(html, /\$3\.99/);

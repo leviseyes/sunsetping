@@ -107,6 +107,8 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
 test("robots, llms.txt, and the FAQ state the product in plain language", async () => {
   const robots = readPublic("robots.txt");
   assert.match(robots, /Allow: \//);
+  assert.match(robots, /Disallow: \/api\//);
+  assert.doesNotMatch(robots, /Disallow: \/(?!api\/)/);
   assert.match(robots, /Sitemap: https:\/\/sunsetping.com\/sitemap\.xml/);
   const llms = readPublic("llms.txt");
   assert.match(llms, /1 to 10/);
@@ -147,11 +149,16 @@ test("homepage and pro page carry the requested structured data", () => {
   assert.match(pro, /"@type":"Offer"/);
   assert.match(pro, /"price":"29\.00"/);
   assert.match(pro, /"price":"3\.99"/);
+  assert.match(pro, /"url":"https:\/\/sunsetping\.com\/pro"/);
+  assert.doesNotMatch(pro, /"url":"https:\/\/sunsetping\.com\/api\/checkout/);
   assert.match(pro, /Save 39%/);
   const yearly = pro.indexOf('href="/api/checkout?plan=yearly"');
   const monthly = pro.indexOf('href="/api/checkout?plan=monthly"');
   assert.ok(yearly > -1 && yearly < monthly);
-  assert.match(pro, /class="btn" href="\/api\/checkout\?plan=yearly"/);
+  assert.match(pro, /class="btn" href="\/api\/checkout\?plan=yearly" rel="nofollow"/);
+  assert.match(pro, /href="\/api\/checkout\?plan=monthly" rel="nofollow"/);
+  assert.match(home, /href="\/api\/checkout\?plan=monthly" rel="nofollow"/);
+  assert.match(home, /href="\/api\/checkout\?plan=yearly" rel="nofollow"/);
 });
 
 test("free alert emails upsell Pro and link a shareable forecast", () => {

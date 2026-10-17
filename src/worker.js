@@ -133,6 +133,26 @@ async function listSpots(env, subscriberId) {
   return rows.results || [];
 }
 
+// Preview fetchers must not open a Checkout Session. curl health checks and browsers still do.
+const CHECKOUT_CRAWLER_UA =
+  /googlebot|bingbot|crawler|spider|facebookexternalhit|slackbot|twitterbot|discordbot|whatsapp|preview|headless|(?:^|[^a-z])(?!cubot\b)[a-z]*bot\b/i;
+
+function isCheckoutPrefetch(req) {
+  const purpose = `${req.headers.get("sec-purpose") || ""} ${req.headers.get("purpose") || ""}`;
+  return /prefetch/i.test(purpose);
+}
+
+function isCheckoutCrawler(req) {
+  const ua = String(req.headers.get("user-agent") || "").trim();
+  if (!ua || /^curl\//i.test(ua)) return false;
+  // WhatsApp/2.x is the link preview. The in-app browser also contains WhatsApp, plus a real engine.
+  if (/whatsapp/i.test(ua) && /applewebkit|chrome|firefox/i.test(ua)) {
+    const withoutClient = ua.replace(/whatsapp/gi, "");
+    if (!CHECKOUT_CRAWLER_UA.test(withoutClient)) return false;
+  }
+  return CHECKOUT_CRAWLER_UA.test(ua);
+}
+
 function stripeUrl(env, plan, email) {
   const specific = plan === "yearly" ? env.STRIPE_PAYMENT_LINK_YEARLY : env.STRIPE_PAYMENT_LINK_MONTHLY;
   const raw = specific || env.STRIPE_PAYMENT_LINK || "";
@@ -298,6 +318,9 @@ async function handleApi(req, url, env, ctx) {
 
   if (url.pathname === "/api/checkout") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
+    if (isCheckoutPrefetch(req) || isCheckoutCrawler(req)) {
+      return Response.redirect(new URL("/pro", url), 302);
+    }
     const plan = url.searchParams.get("plan") === "yearly" ? "yearly" : "monthly";
     const email = url.searchParams.get("email") || "";
     if (env.STRIPE_SECRET_KEY) {

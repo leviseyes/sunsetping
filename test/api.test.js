@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { welcomePage } from "../src/pages.js";
 import worker from "../src/worker.js";
 import { CLEAR, PERFECT, WASHED, createDb, day, flatForecast, geocodeBody, testEnv, withFetch } from "./fixtures.js";
 
@@ -165,16 +166,20 @@ test("share pages carry Open Graph tags and /lookup redirects", async () => {
   });
 });
 
-test("checkout is a placeholder until a Stripe Payment Link is configured", async () => {
+test("checkout explains that nothing was charged until Stripe is configured", async () => {
   const env = testEnv(createDb());
   const open = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly"), env);
   const html = await open.text();
   assert.equal(open.status, 200);
   assert.match(html, /No charge was made/);
-  assert.match(html, /STRIPE_PAYMENT_LINK_MONTHLY/);
+  assert.match(html, /Pro monthly/);
+  assert.doesNotMatch(html, /STRIPE_PAYMENT_LINK/);
+  assert.doesNotMatch(html, /placeholder/i);
   assert.doesNotMatch(html, /card number/i);
   const yearly = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly"), env);
-  assert.match(await yearly.text(), /STRIPE_PAYMENT_LINK_YEARLY/);
+  const yearlyHtml = await yearly.text();
+  assert.match(yearlyHtml, /Pro yearly/);
+  assert.doesNotMatch(yearlyHtml, /STRIPE_PAYMENT_LINK/);
   const unsafe = testEnv(createDb(), { STRIPE_PAYMENT_LINK_MONTHLY: "http://buy.stripe.com/not-https" });
   const blocked = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly"), unsafe);
   assert.equal(blocked.status, 200);
@@ -245,6 +250,21 @@ test("scheduled hook and pro page asset are wired", async () => {
   assert.equal(await pro.text(), "/pro.html");
 });
 
+test("served pages do not show payment placeholder notes", async () => {
+  const files = ["../index.html", "../public/index.html", "../public/pro.html", "../public/faq.html"];
+  const pages = files.map((file) => readFileSync(new URL(file, import.meta.url), "utf8"));
+  const monthly = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly"), testEnv(createDb()));
+  const yearly = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly"), testEnv(createDb()));
+  pages.push(await monthly.text(), await yearly.text());
+  pages.push(await welcomePage({ location: "Denver, Colorado", email: "ada@sunset.test" }).text());
+  for (const html of pages) {
+    assert.doesNotMatch(html, /STRIPE_PAYMENT_LINK/);
+    assert.doesNotMatch(html, /payment placeholder/i);
+    assert.doesNotMatch(html, /checkout placeholder/i);
+    assert.doesNotMatch(html, /<p class="note">[^<]*placeholder/i);
+  }
+});
+
 test("homepage and pro page describe the free and paid split", () => {
   const home = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
   const pro = readFileSync(new URL("../public/pro.html", import.meta.url), "utf8");
@@ -252,7 +272,7 @@ test("homepage and pro page describe the free and paid split", () => {
   assert.match(home, /id="pricing"/);
   assert.match(home, /\$3\.99/);
   assert.match(home, /\$29/);
-  assert.match(home, /STRIPE_PAYMENT_LINK_MONTHLY/);
+  assert.match(home, /Secure checkout by Stripe\./);
   assert.match(pro, /7-day/);
   assert.match(pro, /Sunrise/);
   assert.match(pro, /score is at least N|Score threshold/);

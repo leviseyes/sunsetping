@@ -304,6 +304,71 @@ test("a secret key opens a Checkout Session and a Stripe error falls back to the
 
   const pro = readFileSync(new URL("../public/pro.js", import.meta.url), "utf8");
   assert.match(pro, /No worries\. Nothing was charged\./);
+
+  const callsForBots = [];
+  await withFetch(async (url) => {
+    callsForBots.push(String(url));
+    return Response.json({ id: "cs_test_bot", url: session });
+  }, async () => {
+    const botEnv = testEnv(createDb(), { STRIPE_SECRET_KEY: KEY, STRIPE_PAYMENT_LINK_MONTHLY: LINK });
+    const crawlers = [
+      "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+      "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+      "facebookexternalhit/1.1",
+      "Slackbot-LinkExpanding 1.0",
+      "Twitterbot/1.0",
+      "Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)",
+      "WhatsApp/2.23.20.0 A",
+      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/120.0.0.0 Safari/537.36",
+      "ExampleCrawler/1.0",
+      "ExampleSpider/1.0",
+      "LinkPreview/1.0",
+      "bot/1.0",
+    ];
+    for (const ua of crawlers) {
+      const bot = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+        headers: { "user-agent": ua },
+      }), botEnv);
+      assert.equal(bot.status, 302, ua);
+      assert.equal(new URL(bot.headers.get("location")).pathname, "/pro", ua);
+    }
+    const browserUa = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+    const prefetch = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": browserUa, "sec-purpose": "prefetch" },
+    }), botEnv);
+    assert.equal(prefetch.status, 302);
+    assert.equal(new URL(prefetch.headers.get("location")).pathname, "/pro");
+    const purpose = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": browserUa, purpose: "prefetch" },
+    }), botEnv);
+    assert.equal(purpose.status, 302);
+    assert.equal(callsForBots.length, 0, callsForBots.join("\n"));
+
+    const browser = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": browserUa },
+    }), botEnv);
+    assert.equal(browser.status, 303);
+    assert.equal(browser.headers.get("location"), session);
+    const curl = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": "curl/8.7.1" },
+    }), botEnv);
+    assert.equal(curl.status, 303);
+    assert.equal(curl.headers.get("location"), session);
+    const phone = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": "Mozilla/5.0 (Linux; Android 11; CUBOT X30) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36" },
+    }), botEnv);
+    assert.equal(phone.status, 303);
+    assert.equal(phone.headers.get("location"), session);
+    const anonymous = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly"), botEnv);
+    assert.equal(anonymous.status, 303);
+    assert.equal(anonymous.headers.get("location"), session);
+    const inApp = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 WhatsApp/2.23.20.0" },
+    }), botEnv);
+    assert.equal(inApp.status, 303);
+    assert.equal(inApp.headers.get("location"), session);
+  });
+  assert.equal(callsForBots.length, 5);
   const toml = readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8");
   assert.match(toml, /STRIPE_SECRET_KEY/);
   assert.match(toml, /wrangler secret put/);
