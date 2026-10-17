@@ -148,8 +148,8 @@ ${tonightLine(tonight)}
 <h3>Catch more than one horizon.</h3>
 <ul>${perks}</ul>
 <div class="actions">
-<a class="btn btn-yearly" href="${esc(links.yearly)}">Best value · Yearly $29<span>$2.42/mo, save 39%</span></a>
-<a class="btn btn-monthly" href="${esc(links.monthly)}">Monthly · $3.99</a>
+<a class="btn btn-yearly" href="${esc(links.yearly)}" rel="nofollow">Best value · Yearly $29<span>$2.42/mo, save 39%</span></a>
+<a class="btn btn-monthly" href="${esc(links.monthly)}" rel="nofollow">Monthly · $3.99</a>
 </div>
 </article>
 <p class="welcome-pass"><a href="/">No thanks, free is fine</a></p>
@@ -172,16 +172,14 @@ export function welcomePage({ location, email, tonight = null } = {}) {
   });
 }
 
-export function checkoutPlaceholder({ plan, envName }) {
+export function checkoutPlaceholder({ plan }) {
   const label = plan === "yearly" ? "Pro yearly ($29/year)" : "Pro monthly ($3.99/month)";
-  const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>Checkout placeholder · SunsetPing</title>
+  const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>Checkout · SunsetPing</title>
 <meta name="robots" content="noindex"></head>
 <body class="gate">${topbar("pro")}<main class="gate-card">
 <a class="logo" href="/">SunsetPing</a>
-<p class="eyebrow">Payment placeholder</p>
 <h1>No charge was made.</h1>
-<p>SunsetPing Pro checkout is a Stripe Payment Link, and it is not configured in this environment. Nothing was billed and no card form is shown here.</p>
-<p>When you are ready, set <code>${esc(envName)}</code> to your Stripe Payment Link URL. The ${esc(label)} button will redirect there. Until then this page is the entire checkout.</p>
+<p>Secure checkout by Stripe did not start for ${esc(label)}, so nothing was billed.</p>
 <p><a class="btn" href="/pro">Back to Pro</a></p>
 </main></body></html>`;
   return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
