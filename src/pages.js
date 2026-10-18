@@ -172,8 +172,14 @@ export function welcomePage({ location, email, tonight = null } = {}) {
   });
 }
 
+/** Same plan strings the Pro and home pages already show. */
+export const CHECKOUT_PLAN_LABEL = {
+  monthly: "Pro monthly ($3.99/month)",
+  yearly: "Pro yearly ($29/year)",
+};
+
 export function checkoutPlaceholder({ plan }) {
-  const label = plan === "yearly" ? "Pro yearly ($29/year)" : "Pro monthly ($3.99/month)";
+  const label = CHECKOUT_PLAN_LABEL[plan === "yearly" ? "yearly" : "monthly"];
   const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>Checkout · SunsetPing</title>
 <meta name="robots" content="noindex"></head>
 <body class="gate">${topbar("pro")}<main class="gate-card">
@@ -183,4 +189,32 @@ export function checkoutPlaceholder({ plan }) {
 <p><a class="btn" href="/pro">Back to Pro</a></p>
 </main></body></html>`;
   return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+}
+
+/** Human confirmation step. Does not call Stripe and does not submit itself. */
+export function checkoutInterstitial({ plan, email }) {
+  const key = plan === "yearly" ? "yearly" : "monthly";
+  const label = CHECKOUT_PLAN_LABEL[key];
+  const emailField = email ? `<input type="hidden" name="email" value="${esc(email)}">` : "";
+  const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>Continue to secure checkout · SunsetPing</title>
+<meta name="robots" content="noindex, nofollow"></head>
+<body class="gate">${topbar("pro")}<main class="gate-card">
+<a class="logo" href="/">SunsetPing</a>
+<h1>Continue to secure checkout</h1>
+<p>${esc(label)}. Checkout is hosted by Stripe. Card details are entered on Stripe's secure checkout page, never on sunsetping.com. Cancel any time.</p>
+<form method="GET" action="/api/checkout">
+<input type="hidden" name="plan" value="${key}">
+${emailField}<input type="hidden" name="confirm" value="1">
+<button class="btn" type="submit">Continue</button>
+</form>
+<p><a href="/pro">Back to Pro</a></p>
+</main></body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "private, no-store",
+      "x-robots-tag": "noindex, nofollow",
+    },
+  });
 }

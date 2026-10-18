@@ -20,8 +20,15 @@ function origin(env) {
   return (env?.PUBLIC_BASE_URL || SITE).replace(/\/$/, "");
 }
 
+function jsonLdMarkup(jsonLd) {
+  const blocks = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+  return blocks.filter(Boolean).map((block) =>
+    `<script type="application/ld+json">${JSON.stringify(block).replace(/</g, "\\u003c")}</script>`
+  ).join("");
+}
+
 function head({ title, description, canonical, jsonLd, image }) {
-  const ld = jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, "\\u003c")}</script>` : "";
+  const ld = jsonLdMarkup(jsonLd);
   const ogImage = image || OG_IMAGE;
   const imageMeta = image
     ? `<meta property="og:image:type" content="image/png">
@@ -210,6 +217,76 @@ ${topbar()}
   return htmlResponse(html);
 }
 
+function joinSpots(spots) {
+  if (spots.length <= 1) return spots[0] || "";
+  if (spots.length === 2) return `${spots[0]} and ${spots[1]}`;
+  return `${spots.slice(0, -1).join(", ")}, and ${spots[spots.length - 1]}`;
+}
+
+const SCORE_WORKS = "The score uses cloud layers, humidity, and visibility. 8 or above means don't miss it.";
+
+/** Visible Q&A for a city page. Time and score answers are omitted when the forecast failed. */
+export function cityQuickAnswers(city, score) {
+  const name = city.city;
+  const qa = [];
+  if (score?.sunset && score?.date) {
+    const tz = score.tz ? ` ${score.tz}` : "";
+    qa.push({
+      q: `What time is sunset in ${name} today?`,
+      a: `Sunset in ${name} today (${score.date}) is at ${score.sunset}${tz}.`,
+    });
+    const viewing = score.viewing || {};
+    if (viewing.goldenHourStart && viewing.goldenHourEnd) {
+      let golden = `Golden hour in ${name} tonight runs ${compactClockRange(viewing.goldenHourStart, viewing.goldenHourEnd)}`;
+      golden += viewing.blueHourEnd ? ` and blue hour ends ${viewing.blueHourEnd}.` : ".";
+      qa.push({ q: `When is golden hour in ${name} tonight?`, a: golden });
+    }
+    if (score.score != null && score.score !== "" && score.verdict) {
+      qa.push({
+        q: `Will the sunset be good in ${name} tonight?`,
+        a: `Tonight's SunsetPing score is ${score.score}/10: ${score.verdict}. ${SCORE_WORKS}`,
+      });
+    }
+  }
+  if (Array.isArray(city.spots) && city.spots.length) {
+    qa.push({
+      q: `Where is the best place to watch the sunset in ${name}?`,
+      a: `People watch the sunset in ${name} from ${joinSpots(city.spots)}.`,
+    });
+  }
+  return qa;
+}
+
+function faqPageJsonLd(qa) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: qa.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.a },
+    })),
+  };
+}
+
+function breadcrumbJsonLd(base, city) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: `${base}/` },
+      { "@type": "ListItem", position: 2, name: "Sunset cities", item: `${base}/sunset` },
+      { "@type": "ListItem", position: 3, name: city.city, item: `${base}/sunset/${city.slug}` },
+    ],
+  };
+}
+
+function quickAnswersHtml(city, qa) {
+  if (!qa.length) return "";
+  const body = qa.map((item) => `<h3>${esc(item.q)}</h3><p>${esc(item.a)}</p>`).join("");
+  return `<section class="city-qa" aria-label="${esc(`Sunset in ${city.city} — quick answers`)}"><h2>Sunset in ${esc(city.city)} — quick answers</h2>${body}</section>`;
+}
+
 function cityJsonLd({ base, canonical, city, score, description }) {
   const question = `Will tonight's sunset be good in ${city.city}?`;
   const ld = {
@@ -256,12 +333,17 @@ function cityHtml(env, city, score) {
     ? `Tonight's sunset in ${city.city}: ${score.score}/10`
     : `Tonight's sunset in ${city.city}`;
   const shareHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(canonical)}`;
+  const qa = cityQuickAnswers(city, score);
   return `<!doctype html><html lang="en"><head>${head({
     title: score ? cityPageTitle(city.city, score) : `${question} · SunsetPing`,
     description,
     canonical,
     image: `${base}/og/${city.slug}.png`,
-    jsonLd: cityJsonLd({ base, canonical, city, score, description }),
+    jsonLd: [
+      cityJsonLd({ base, canonical, city, score, description }),
+      qa.length ? faqPageJsonLd(qa) : null,
+      breadcrumbJsonLd(base, city),
+    ],
   })}</head>
 <body><main class="wrap doc">
 ${topbar()}
@@ -269,6 +351,7 @@ ${topbar()}
 <h1>${esc(question)}</h1>
 <p class="lede">${esc(city.tip)}</p>
 ${liveScoreHtml(city, score)}
+${quickAnswersHtml(city, qa)}
 <div class="tips">
 <section>
 <h2>Where people stand</h2>
@@ -437,7 +520,7 @@ export function sitemapXml(env) {
   const urls = ["/", "/pro", "/faq", "/sunset", ...CITIES.map((city) => `/sunset/${city.slug}`)];
   const body = urls.map((path) => {
     const loc = `${base}${path}`;
-    if (path.startsWith("/sunset/")) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;
+    if (path === "/sunset" || path.startsWith("/sunset/")) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;
     return `  <url><loc>${loc}</loc></url>`;
   }).join("\n");
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;

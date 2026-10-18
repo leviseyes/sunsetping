@@ -13,10 +13,35 @@ function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+function jsonLdBlocks(html) {
+  return [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((block) => JSON.parse(block[1]));
+}
+
 function jsonLd(html) {
-  const blocks = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
-  assert.equal(blocks.length, 1);
-  return JSON.parse(blocks[0][1]);
+  const page = jsonLdBlocks(html).find((block) => block["@type"] === "WebPage");
+  assert.ok(page, "WebPage JSON-LD");
+  return page;
+}
+
+function decodeText(value) {
+  return String(value)
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function cityQa(html) {
+  const section = html.match(/<section class="city-qa"[\s\S]*?<\/section>/);
+  assert.ok(section, "quick answers section");
+  return [...section[0].matchAll(/<h3>([\s\S]*?)<\/h3>\s*<p>([\s\S]*?)<\/p>/g)].map((pair) => ({
+    q: decodeText(pair[1]),
+    a: decodeText(pair[2]),
+  }));
 }
 
 function austinForecast() {
@@ -103,6 +128,33 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(html, /action="\/api\/subscribe"/);
     assert.match(html, /name="location" value="Austin, Texas"/);
     assert.match(html, /Mount Bonnell/);
+    const pairs = cityQa(html);
+    assert.deepEqual(pairs.map((pair) => pair.q), [
+      "What time is sunset in Austin today?",
+      "When is golden hour in Austin tonight?",
+      "Will the sunset be good in Austin tonight?",
+      "Where is the best place to watch the sunset in Austin?",
+    ]);
+    assert.equal(pairs[0].a, "Sunset in Austin today (Thursday, October 15) is at 6:59 PM CDT.");
+    assert.equal(pairs[1].a, "Golden hour in Austin tonight runs 5:59-6:59 PM and blue hour ends 7:39 PM.");
+    assert.equal(pairs[2].a, "Tonight's SunsetPing score is 10/10: Don't miss it. The score uses cloud layers, humidity, and visibility. 8 or above means don't miss it.");
+    assert.equal(pairs[3].a, "People watch the sunset in Austin from Mount Bonnell, 360 Bridge overlook, and Lady Bird Lake.");
+    const blocks = jsonLdBlocks(html);
+    const faq = blocks.find((block) => block["@type"] === "FAQPage");
+    assert.ok(faq);
+    assert.equal(faq.mainEntity.length, pairs.length);
+    for (const pair of pairs) {
+      const entry = faq.mainEntity.find((item) => item.name === pair.q);
+      assert.equal(entry.acceptedAnswer.text, pair.a);
+    }
+    const crumbs = blocks.find((block) => block["@type"] === "BreadcrumbList");
+    assert.deepEqual(crumbs.itemListElement.map((item) => item.name), ["Home", "Sunset cities", "Austin"]);
+    assert.deepEqual(crumbs.itemListElement.map((item) => item.item), [
+      "https://sunsetping.com/",
+      "https://sunsetping.com/sunset",
+      "https://sunsetping.com/sunset/austin",
+    ]);
+    assert.deepEqual(crumbs.itemListElement.map((item) => item.position), [1, 2, 3]);
     const ld = jsonLd(html);
     assert.equal(ld["@type"], "WebPage");
     assert.equal(ld.dateModified, "2026-10-15");
@@ -128,6 +180,18 @@ test("a city page stays 200 with the static shell when the forecast fails or tim
     assert.match(html, /Mount Bonnell/);
     assert.match(html, /action="\/api\/subscribe"/);
     assert.doesNotMatch(html, /Tonight&#39;s SunsetPing score is/);
+    assert.doesNotMatch(html, /What time is sunset in Austin today/);
+    assert.doesNotMatch(html, /When is golden hour in Austin tonight/);
+    assert.doesNotMatch(html, /Will the sunset be good in Austin tonight/);
+    const pairs = cityQa(html);
+    assert.deepEqual(pairs.map((pair) => pair.q), ["Where is the best place to watch the sunset in Austin?"]);
+    assert.equal(pairs[0].a, "People watch the sunset in Austin from Mount Bonnell, 360 Bridge overlook, and Lady Bird Lake.");
+    const blocks = jsonLdBlocks(html);
+    const faq = blocks.find((block) => block["@type"] === "FAQPage");
+    assert.equal(faq.mainEntity.length, 1);
+    assert.equal(faq.mainEntity[0].name, pairs[0].q);
+    assert.equal(faq.mainEntity[0].acceptedAnswer.text, pairs[0].a);
+    assert.ok(blocks.some((block) => block["@type"] === "BreadcrumbList"));
     assert.match(page.headers.get("cache-control"), /max-age=60/);
     assert.doesNotMatch(page.headers.get("cache-control") || "", /s-maxage/);
     const ld = jsonLd(html);

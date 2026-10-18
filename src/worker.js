@@ -2,7 +2,8 @@ import { rankScores, scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
 import { MAX_SPOTS, runAlerts } from "./alerts.js";
 import { authorizeCron, issueError, prepareIssue, runWeeklyNewsletter } from "./newsletter.js";
-import { checkoutPlaceholder, ogSvg, proCheckoutPaths, sharePage, simplePage, welcomeOfferHtml, welcomePage } from "./pages.js";
+import { isRealCheckoutNavigation, logCheckoutAttempt } from "./checkout-nav.js";
+import { checkoutInterstitial, checkoutPlaceholder, ogSvg, proCheckoutPaths, sharePage, simplePage, welcomeOfferHtml, welcomePage } from "./pages.js";
 import { deliverWelcome, loadTonight } from "./welcome.js";
 import { appendPrefilledEmail, checkoutCancelUrl, createCheckoutSession, stripeWebhook } from "./stripe.js";
 import { growthRoute } from "./growth.js";
@@ -318,11 +319,17 @@ async function handleApi(req, url, env, ctx) {
 
   if (url.pathname === "/api/checkout") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
-    if (isCheckoutPrefetch(req) || isCheckoutCrawler(req)) {
-      return Response.redirect(new URL("/pro", url), 302);
-    }
     const plan = url.searchParams.get("plan") === "yearly" ? "yearly" : "monthly";
     const email = url.searchParams.get("email") || "";
+    const confirm = url.searchParams.get("confirm") === "1";
+    if (isCheckoutPrefetch(req) || isCheckoutCrawler(req)) {
+      logCheckoutAttempt(ctx, env, req, { plan, outcome: "crawler_redirect", confirm });
+      return Response.redirect(new URL("/pro", url), 302);
+    }
+    if (!confirm && !isRealCheckoutNavigation(req)) {
+      logCheckoutAttempt(ctx, env, req, { plan, outcome: "interstitial", confirm });
+      return checkoutInterstitial({ plan, email });
+    }
     if (env.STRIPE_SECRET_KEY) {
       try {
         const sessionUrl = await createCheckoutSession({
@@ -331,13 +338,20 @@ async function handleApi(req, url, env, ctx) {
           email,
           cancelUrl: checkoutCancelUrl(req.headers.get("referer")),
         });
-        if (sessionUrl) return Response.redirect(sessionUrl, 303);
+        if (sessionUrl) {
+          logCheckoutAttempt(ctx, env, req, { plan, outcome: "session", confirm, sessionUrl });
+          return Response.redirect(sessionUrl, 303);
+        }
       } catch (err) {
         console.log(JSON.stringify({ event: "stripe_checkout_session_error", message: String(err?.message || err) }));
       }
     }
     const link = stripeUrl(env, plan, email);
-    if (!link.url) return checkoutPlaceholder({ plan, envName: link.envName });
+    if (!link.url) {
+      logCheckoutAttempt(ctx, env, req, { plan, outcome: "placeholder", confirm });
+      return checkoutPlaceholder({ plan, envName: link.envName });
+    }
+    logCheckoutAttempt(ctx, env, req, { plan, outcome: "fallback_link", confirm });
     return Response.redirect(link.url, 302);
   }
 

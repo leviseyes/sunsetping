@@ -1,4 +1,4 @@
--- Full schema snapshot after migrations/0003_stripe.sql.
+-- Full schema snapshot after migrations/0004_checkout_attempts.sql.
 -- Existing databases should apply the files in migrations/ (wrangler d1 migrations apply).
 -- This file is the greenfield equivalent, not a second migration.
 
@@ -49,4 +49,25 @@ CREATE TABLE IF NOT EXISTS alert_sends (
   local_date TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   UNIQUE (subscriber_id, kind, local_date)
+);
+
+-- Checkout attempt diagnostics. Do not store IP addresses or email addresses.
+-- outcome is one of: session, interstitial, crawler_redirect, fallback_link, placeholder.
+CREATE TABLE IF NOT EXISTS checkout_attempts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  plan TEXT,
+  outcome TEXT NOT NULL,
+  confirm INTEGER NOT NULL DEFAULT 0,
+  ua TEXT,
+  sec_fetch_mode TEXT,
+  sec_fetch_site TEXT,
+  sec_fetch_user TEXT,
+  sec_fetch_dest TEXT,
+  has_accept_language INTEGER,
+  referer_host TEXT,
+  country TEXT,
+  asn INTEGER,
+  as_org TEXT,
+  session_id_suffix TEXT
 );

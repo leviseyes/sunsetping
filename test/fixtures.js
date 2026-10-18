@@ -41,9 +41,29 @@ export function createDb(initial = {}) {
     saved: (initial.saved || []).map((s) => ({ ...s })),
     sends: (initial.sends || []).map((s) => ({ ...s })),
     stripeEvents: (initial.stripeEvents || []).map((s) => ({ ...s })),
+    checkoutAttempts: (initial.checkoutAttempts || []).map((s) => ({ ...s })),
     nextId: initial.nextId || 100,
   };
   const query = (sql, args, mode) => {
+    if (sql.includes("INSERT INTO checkout_attempts")) {
+      state.checkoutAttempts.push({
+        plan: args[0],
+        outcome: args[1],
+        confirm: args[2],
+        ua: args[3],
+        sec_fetch_mode: args[4],
+        sec_fetch_site: args[5],
+        sec_fetch_user: args[6],
+        sec_fetch_dest: args[7],
+        has_accept_language: args[8],
+        referer_host: args[9],
+        country: args[10],
+        asn: args[11],
+        as_org: args[12],
+        session_id_suffix: args[13],
+      });
+      return { success: true, meta: { changes: 1 } };
+    }
     if (sql.includes("INSERT INTO stripe_events")) {
       if (state.stripeEvents.some((e) => e.id === args[0])) return { success: true, meta: { changes: 0 } };
       state.stripeEvents.push({ id: args[0], type: args[1] });

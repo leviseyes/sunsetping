@@ -16,14 +16,23 @@ The score is a whole number from 1 to 10. It uses the hour around sunset and loo
 - 4 or 5: Maybe a quick peek.
 - 3 or below: Probably skip tonight.
 
-The live score for any city is in that city's page HTML (sunset time, golden hour, and the 1–10 score), and on the homepage search. Do not invent a score. Fetch the page or call GET https://sunsetping.com/api/score?q=CITY
+The live score for a city is in the city page HTML at https://sunsetping.com/sunset/<slug> (sunset time, golden hour, and the 1–10 score). Do not invent a score. Fetch that page. GET https://sunsetping.com/api/score?q=CITY returns the same numbers, but robots.txt disallows /api/, so quote the city page.
 
 ## Pricing
 
 - Free: one location and a same-day sunset alert. Checking a score does not require an account.
 - Pro: $3.99 per month, or $29 per year (save 39% versus monthly).
 - Pro includes up to 10 saved spots, sunrise alerts, a 7-day outlook, a day-before heads-up at 4:00 PM local, a minimum-score threshold, and a best-spot ranking in the evening email.
-- Checkout is a Stripe Payment Link. There is no card form on sunsetping.com.
+- Checkout is hosted by Stripe. Card details are entered on Stripe's secure checkout page, never on sunsetping.com. Cancel any time.
+
+## Common questions
+
+- What is SunsetPing? SunsetPing tells you whether tonight's sunset is worth going outside. You type a city or ZIP code and get a score from 1 to 10, the local sunset time, a short viewing window, and one sentence on why. You can also get an email the same day. Checking a score does not require an account.
+- How does the sunset score work? The score is a whole number from 1 to 10. It uses the weather in the hour around sunset: low cloud, mid cloud, and high cloud, plus humidity, visibility, and precipitation. Enough broken cloud to catch the color scores higher. A thick low blanket, rain, or poor visibility scores lower. A completely clear sky also scores lower, because there is little for the light to catch. 8 or above means don't miss it. 6 or 7 is worth stepping outside. 4 or 5 is a quick peek. 3 or below means you can probably skip tonight.
+- What is free versus Pro? Free is one location and a same-day sunset alert, sent about three hours before sunset by default. Pro adds up to 10 saved spots, sunrise alerts, a 7-day sunset outlook, a day-before heads-up at 4:00 PM local, a score threshold, and a best-spot ranking in the evening email.
+- How much does Pro cost? Pro is $3.99 a month or $29 a year. Yearly saves 39% compared with paying $3.99 each month.
+- How do alerts arrive? The free alert is for today's sunset, about three hours ahead. Pro can also send a sunrise alert about an hour ahead, and a note at 4:00 PM local about tomorrow if you turn that on.
+- How do I cancel or unsubscribe? Every alert email has an unsubscribe link that stops future emails. Pro is billed through Stripe. Cancel any time. Checkout is hosted by Stripe. Card details are entered on Stripe's secure checkout page, never on sunsetping.com.
 
 ## Pages
 

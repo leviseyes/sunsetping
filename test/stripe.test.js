@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { CHECKOUT_PLAN_LABEL } from "../src/pages.js";
 import { CHECKOUT_PRICES, CHECKOUT_SUCCESS_URL } from "../src/stripe.js";
 import worker from "../src/worker.js";
 import { createDb, testEnv, withFetch } from "./fixtures.js";
@@ -344,8 +345,13 @@ test("a secret key opens a Checkout Session and a Stripe error falls back to the
     assert.equal(purpose.status, 302);
     assert.equal(callsForBots.length, 0, callsForBots.join("\n"));
 
+    const realNav = {
+      "sec-fetch-mode": "navigate",
+      "sec-fetch-dest": "document",
+      "accept-language": "en-US,en;q=0.9",
+    };
     const browser = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
-      headers: { "user-agent": browserUa },
+      headers: { "user-agent": browserUa, ...realNav },
     }), botEnv);
     assert.equal(browser.status, 303);
     assert.equal(browser.headers.get("location"), session);
@@ -355,7 +361,10 @@ test("a secret key opens a Checkout Session and a Stripe error falls back to the
     assert.equal(curl.status, 303);
     assert.equal(curl.headers.get("location"), session);
     const phone = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
-      headers: { "user-agent": "Mozilla/5.0 (Linux; Android 11; CUBOT X30) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36" },
+      headers: {
+        "user-agent": "Mozilla/5.0 (Linux; Android 11; CUBOT X30) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+        ...realNav,
+      },
     }), botEnv);
     assert.equal(phone.status, 303);
     assert.equal(phone.headers.get("location"), session);
@@ -372,4 +381,203 @@ test("a secret key opens a Checkout Session and a Stripe error falls back to the
   const toml = readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8");
   assert.match(toml, /STRIPE_SECRET_KEY/);
   assert.match(toml, /wrangler secret put/);
+});
+
+const CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const NAV = {
+  "sec-fetch-mode": "navigate",
+  "sec-fetch-dest": "document",
+  "accept-language": "en-US,en;q=0.9",
+};
+const SESSION = "https://checkout.stripe.com/c/pay/cs_test_abcdef1234";
+
+function sessionFetch() {
+  return async () => Response.json({ id: "cs_test_abcdef1234", url: SESSION });
+}
+
+test("checkout opens a Stripe session only for a real top-level navigation", async () => {
+  const calls = [];
+  const env = () => testEnv(createDb(), { STRIPE_SECRET_KEY: "rk_test_nav", STRIPE_PAYMENT_LINK_MONTHLY: LINK });
+  await withFetch(async (url) => {
+    calls.push(String(url));
+    return Response.json({ id: "cs_test_abcdef1234", url: SESSION });
+  }, async () => {
+    const ready = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": CHROME, ...NAV },
+    }), env());
+    assert.equal(ready.status, 303);
+    assert.equal(ready.headers.get("location"), SESSION);
+    assert.equal(calls.length, 1);
+
+    const bare = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": CHROME },
+    }), env());
+    assert.equal(bare.status, 200);
+    assert.match(bare.headers.get("content-type"), /text\/html/);
+    assert.equal(bare.headers.get("x-robots-tag"), "noindex, nofollow");
+    assert.match(bare.headers.get("cache-control"), /private/);
+    assert.match(bare.headers.get("cache-control"), /no-store/);
+    const bareHtml = await bare.text();
+    assert.match(bareHtml, /Continue to secure checkout/);
+    assert.ok(bareHtml.includes(CHECKOUT_PLAN_LABEL.yearly));
+    assert.match(bareHtml, /<form method="GET" action="\/api\/checkout">/);
+    assert.match(bareHtml, /name="plan" value="yearly"/);
+    assert.match(bareHtml, /name="confirm" value="1"/);
+    assert.match(bareHtml, /href="\/pro"/);
+    assert.doesNotMatch(bareHtml, /<script/i);
+    assert.doesNotMatch(bareHtml, /payment link/i);
+    assert.equal(calls.length, 1);
+
+    const noCors = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": CHROME, "sec-fetch-mode": "no-cors", "sec-fetch-dest": "document", "accept-language": "en" },
+    }), env());
+    assert.equal(noCors.status, 200);
+    assert.match(await noCors.text(), /Continue to secure checkout/);
+    assert.equal(calls.length, 1);
+
+    const noLang = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": CHROME, "sec-fetch-mode": "navigate", "sec-fetch-dest": "document" },
+    }), env());
+    assert.equal(noLang.status, 200);
+    assert.ok((await noLang.text()).includes(CHECKOUT_PLAN_LABEL.monthly));
+    assert.equal(calls.length, 1);
+
+    const confirmed = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly&confirm=1", {
+      headers: { "user-agent": CHROME },
+    }), env());
+    assert.equal(confirmed.status, 303);
+    assert.equal(confirmed.headers.get("location"), SESSION);
+    assert.equal(calls.length, 2);
+
+    const safari = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" },
+    }), env());
+    assert.equal(safari.status, 303);
+    assert.equal(safari.headers.get("location"), SESSION);
+
+    const crios = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0.6478.54 Mobile/15E148 Safari/604.1" },
+    }), env());
+    assert.equal(crios.status, 303);
+    assert.equal(crios.headers.get("location"), SESSION);
+
+    const curl = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": "curl/8.6.0" },
+    }), env());
+    assert.equal(curl.status, 303);
+    assert.equal(curl.headers.get("location"), SESSION);
+
+    const bot = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly&confirm=1", {
+      headers: { "user-agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)", ...NAV },
+    }), env());
+    assert.equal(bot.status, 302);
+    assert.equal(new URL(bot.headers.get("location")).pathname, "/pro");
+
+    const prefetch = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly&confirm=1", {
+      headers: { "user-agent": CHROME, "sec-purpose": "prefetch", ...NAV },
+    }), env());
+    assert.equal(prefetch.status, 302);
+    assert.equal(new URL(prefetch.headers.get("location")).pathname, "/pro");
+    assert.equal(calls.length, 5);
+  });
+});
+
+test("checkout interstitial escapes the email and does not include it when absent", async () => {
+  const env = testEnv(createDb(), { STRIPE_SECRET_KEY: "rk_test_nav" });
+  await withFetch(async () => {
+    throw new Error("stripe should not be called");
+  }, async () => {
+    const nasty = `ada@sunset.test"><script>alert(1)</script>`;
+    const res = await worker.fetch(new Request(`https://sunsetping.com/api/checkout?plan=monthly&email=${encodeURIComponent(nasty)}`, {
+      headers: { "user-agent": CHROME },
+    }), env);
+    const html = await res.text();
+    assert.equal(res.status, 200);
+    assert.match(html, /name="email" value="ada@sunset\.test&quot;&gt;&lt;script&gt;alert\(1\)&lt;\/script&gt;"/);
+    assert.doesNotMatch(html, /<script>alert/);
+    assert.equal((html.match(/<form/g) || []).length, 1);
+    const plain = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": CHROME, "sec-fetch-mode": "cors" },
+    }), env);
+    assert.doesNotMatch(await plain.text(), /name="email"/);
+  });
+});
+
+test("checkout attempt logging records the outcome and survives a database error", async () => {
+  const migration = readFileSync(new URL("../migrations/0004_checkout_attempts.sql", import.meta.url), "utf8");
+  const schema = readFileSync(new URL("../schema.sql", import.meta.url), "utf8");
+  for (const sql of [migration, schema]) {
+    const table = sql.match(/CREATE TABLE IF NOT EXISTS checkout_attempts \([\s\S]*?\);/);
+    assert.ok(table, sql.slice(0, 40));
+    assert.doesNotMatch(table[0], /email/i);
+    assert.doesNotMatch(table[0], /\bip\b/i);
+    assert.match(table[0], /session_id_suffix/);
+  }
+  const db = createDb();
+  const pending = [];
+  const ctx = { waitUntil(task) { pending.push(task); } };
+  const longUa = `${CHROME} ${"x".repeat(400)}`;
+  const req = new Request("https://sunsetping.com/api/checkout?plan=yearly&email=secret-ada@sunset.test", {
+    headers: {
+      "user-agent": longUa,
+      ...NAV,
+      "sec-fetch-site": "same-origin",
+      "sec-fetch-user": "?1",
+      referer: "https://www.sunsetping.com/pro?email=secret-ada@sunset.test",
+    },
+  });
+  req.cf = { country: "US", asn: 13335, asOrganization: "A".repeat(180), ip: "203.0.113.50" };
+  await withFetch(sessionFetch(), async () => {
+    const res = await worker.fetch(req, testEnv(db, { STRIPE_SECRET_KEY: "rk_test_nav" }), ctx);
+    assert.equal(res.status, 303);
+    assert.equal(res.headers.get("location"), SESSION);
+  });
+  await Promise.all(pending);
+  assert.equal(db.state.checkoutAttempts.length, 1);
+  const row = db.state.checkoutAttempts[0];
+  assert.equal(row.outcome, "session");
+  assert.equal(row.plan, "yearly");
+  assert.equal(row.confirm, 0);
+  assert.equal(row.session_id_suffix, "abcdef1234");
+  assert.equal(row.country, "US");
+  assert.equal(row.asn, 13335);
+  assert.equal(row.as_org, "A".repeat(100));
+  assert.equal(row.ua.length, 300);
+  assert.equal(row.sec_fetch_mode, "navigate");
+  assert.equal(row.sec_fetch_dest, "document");
+  assert.equal(row.sec_fetch_site, "same-origin");
+  assert.equal(row.sec_fetch_user, "?1");
+  assert.equal(row.has_accept_language, 1);
+  assert.equal(row.referer_host, "www.sunsetping.com");
+  const blob = JSON.stringify(row);
+  assert.doesNotMatch(blob, /secret-ada@sunset\.test/);
+  assert.doesNotMatch(blob, /203\.0\.113\.50/);
+  assert.equal(row.email, undefined);
+  assert.equal(row.ip, undefined);
+
+  const interstitialDb = createDb();
+  await withFetch(async () => {
+    throw new Error("stripe should not be called");
+  }, async () => {
+    const held = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": CHROME },
+    }), testEnv(interstitialDb, { STRIPE_SECRET_KEY: "rk_test_nav" }));
+    assert.equal(held.status, 200);
+  });
+  assert.equal(interstitialDb.state.checkoutAttempts[0].outcome, "interstitial");
+  assert.equal(interstitialDb.state.checkoutAttempts[0].session_id_suffix, null);
+
+  const broken = {
+    prepare() {
+      throw new Error("no such table: checkout_attempts");
+    },
+  };
+  await withFetch(sessionFetch(), async () => {
+    const res = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": CHROME, ...NAV },
+    }), testEnv(createDb(), { STRIPE_SECRET_KEY: "rk_test_nav", DB: broken }));
+    assert.equal(res.status, 303);
+    assert.equal(res.headers.get("location"), SESSION);
+  });
+  await new Promise((resolve) => setImmediate(resolve));
 });
