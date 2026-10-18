@@ -167,13 +167,17 @@ test("robots, llms.txt, and the FAQ state the product in plain language", async 
   const faqPage = faqLd.find((block) => block["@type"] === "FAQPage");
   assert.ok(faqPage);
   assert.equal(faqPage.mainEntity.length, visible.length);
+  const freeVersusPro = "Free is one location and a same-day sunset alert, sent about three hours before sunset by default. Pro is for more than one horizon: up to 10 saved spots, sunrise alerts, a 7-day sunset outlook, a day-before heads-up at 4:00 PM local, a score threshold so a quiet sky stays quiet, and a best-spot ranking in the evening email.";
   for (const pair of visible) {
     const entry = faqPage.mainEntity.find((item) => item.name === pair.q);
     assert.ok(entry, pair.q);
     assert.equal(entry["@type"], "Question");
     assert.equal(entry.acceptedAnswer["@type"], "Answer");
-    assert.equal(entry.acceptedAnswer.text.replace(/\s+/g, " ").trim(), pair.a);
+    const answer = entry.acceptedAnswer.text.replace(/\s+/g, " ").trim();
+    if (pair.q === "What is free versus Pro?") assert.equal(answer, freeVersusPro);
+    else assert.equal(answer, pair.a);
   }
+  assert.doesNotMatch(`${faq}\n${llms}`, /Nothing is mailed unless an email provider key/);
   for (const file of ["index.html", "pro.html", "faq.html", "llms.txt"]) {
     assert.doesNotMatch(readPublic(file), /payment link/i, file);
   }
