@@ -21,6 +21,62 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is SunsetPing?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "SunsetPing tells you whether tonight's sunset is worth going outside. You type a city or ZIP code and get a score from 1 to 10, the local sunset time, a short viewing window, and one sentence on why. You can also get an email the same day. Checking a score does not require an account."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does the sunset score work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The score is a whole number from 1 to 10. It uses the weather in the hour around sunset: low cloud, mid cloud, and high cloud, plus humidity, visibility, and precipitation. Enough broken cloud to catch the color scores higher. A thick low blanket, rain, or poor visibility scores lower. A completely clear sky also scores lower, because there is little for the light to catch. 8 or above means don't miss it. 6 or 7 is worth stepping outside. 4 or 5 is a quick peek. 3 or below means you can probably skip tonight. The same rules, shifted to sunrise, are what Pro uses for morning alerts."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is free versus Pro?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Free is one location and a same-day sunset alert, sent about three hours before sunset by default. Pro is for more than one horizon: Up to 10 saved spots Sunrise alerts A 7-day sunset outlook A day-before heads-up at 4:00 PM local A score threshold, so a quiet sky stays quiet A best-spot ranking in the evening email"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much does Pro cost?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Pro is $3.99 a month or $29 a year. Yearly saves 39% compared with paying $3.99 each month. The yearly plan is the default on the Pro page. Checkout is hosted by Stripe. Card details are entered on Stripe's secure checkout page, never on sunsetping.com. Cancel any time."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "When do alerts arrive?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The free alert is for today's sunset, about three hours ahead. Pro can also send a sunrise alert about an hour ahead, and a note at 4:00 PM local about tomorrow if you turn that on. Nothing is mailed unless an email provider key is configured for the site."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where are the city pages?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Fifty city forecasts live under /sunset, for example Sedona, Malibu, Key West, Maui, and Big Sur. Each page includes tonight's sunset time, golden hour, and score in the HTML, from the same forecast the homepage uses."
+      }
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <header class="topbar">
@@ -55,7 +111,7 @@
   </ul>
 
   <h2>How much does Pro cost?</h2>
-  <p>Pro is $3.99 a month or $29 a year. Yearly saves 39% compared with paying $3.99 each month. The yearly plan is the default on the <a href="/pro">Pro page</a>. Checkout is a Stripe Payment Link. SunsetPing does not show a card form.</p>
+  <p>Pro is $3.99 a month or $29 a year. Yearly saves 39% compared with paying $3.99 each month. The yearly plan is the default on the <a href="/pro">Pro page</a>. Checkout is hosted by Stripe. Card details are entered on Stripe's secure checkout page, never on sunsetping.com. Cancel any time.</p>
 
   <h2>When do alerts arrive?</h2>
   <p>The free alert is for today's sunset, about three hours ahead. Pro can also send a sunrise alert about an hour ahead, and a note at 4:00 PM local about tomorrow if you turn that on. Nothing is mailed unless an email provider key is configured for the site.</p>

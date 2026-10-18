@@ -321,6 +321,11 @@ footer a { color: var(--ink); }
 .city-fact { margin: 0 0 16px; font-size: 18px; line-height: 1.45; }
 .city-score { margin: 0 0 6px; font-size: 18px; }
 .city-score strong { font-family: var(--serif); font-size: 64px; font-weight: 400; letter-spacing: -0.04em; display: block; line-height: .9; }
+.city-qa { margin: 0 0 28px; }
+.city-qa h2 { font-size: clamp(32px, 4vw, 48px); line-height: 1.05; margin: 0 0 8px; max-width: 16em; }
+.city-qa h3 { font-family: var(--serif); font-size: 26px; font-weight: 400; letter-spacing: -0.02em; margin: 18px 0 4px; }
+.city-qa p { margin: 0; line-height: 1.5; max-width: 40em; }
+.gate-card form { margin: 16px 0 8px; }
 .tips { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; align-items: start; }
 .tips ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); line-height: 1.5; }
 .nearby { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline; margin: 28px 0 8px; }

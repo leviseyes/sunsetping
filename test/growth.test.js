@@ -13,6 +13,29 @@ function readPublic(name) {
   return readFileSync(new URL(`../public/${name}`, import.meta.url), "utf8");
 }
 
+function visibleText(value) {
+  return String(value)
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<\/(p|li|h2|ul|div|section)>/gi, " ")
+    .replace(/<br\s*\/?>/gi, " ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function faqPairs(html) {
+  const main = html.match(/<main[\s\S]*?<\/main>/)[0];
+  return main.split(/<h2>/).slice(1).map((chunk) => {
+    const [question, rest] = chunk.split("</h2>");
+    return { q: visibleText(question), a: visibleText(rest) };
+  });
+}
+
 function home(score, extra = {}) {
   return {
     location: "Denver, Colorado",
@@ -96,12 +119,14 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length);
+  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length + 1);
   for (const city of CITIES) {
     assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc><lastmod>${lastmod}</lastmod>`));
   }
+  assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset</loc><lastmod>${lastmod}</lastmod>`));
   assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/<\/loc><lastmod>/);
-  assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/sunset<\/loc><lastmod>/);
+  assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/pro<\/loc><lastmod>/);
+  assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/faq<\/loc><lastmod>/);
 });
 
 test("robots, llms.txt, and the FAQ state the product in plain language", async () => {
@@ -117,6 +142,14 @@ test("robots, llms.txt, and the FAQ state the product in plain language", async 
   assert.match(llms, /save 39%/);
   assert.match(llms, /GET https:\/\/sunsetping.com\/api\/score\?q=CITY/);
   assert.match(llms, /Do not invent a score/);
+  assert.match(llms, /https:\/\/sunsetping.com\/sunset\/<slug>/);
+  assert.match(llms, /robots\.txt disallows \/api\//);
+  assert.match(llms, /Checkout is hosted by Stripe/);
+  assert.match(llms, /never on sunsetping\.com/);
+  assert.match(llms, /## Common questions/);
+  assert.match(llms, /How do I cancel or unsubscribe\?/);
+  assert.match(llms, /unsubscribe link/);
+  assert.doesNotMatch(llms, /payment link/i);
   const faq = readPublic("faq.html");
   assert.match(faq, /What is SunsetPing\?/);
   assert.match(faq, /How does the sunset score work\?/);
@@ -126,6 +159,24 @@ test("robots, llms.txt, and the FAQ state the product in plain language", async 
   assert.match(faq, /saves 39%/);
   assert.match(faq, /rel="canonical" href="https:\/\/sunsetping.com\/faq"/);
   assert.match(faq, /href="\/sunset\/sedona"/);
+  assert.match(faq, /Checkout is hosted by Stripe/);
+  assert.doesNotMatch(faq, /payment link/i);
+  assert.doesNotMatch(faq, /card form/i);
+  const visible = faqPairs(faq);
+  const faqLd = [...faq.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((block) => JSON.parse(block[1]));
+  const faqPage = faqLd.find((block) => block["@type"] === "FAQPage");
+  assert.ok(faqPage);
+  assert.equal(faqPage.mainEntity.length, visible.length);
+  for (const pair of visible) {
+    const entry = faqPage.mainEntity.find((item) => item.name === pair.q);
+    assert.ok(entry, pair.q);
+    assert.equal(entry["@type"], "Question");
+    assert.equal(entry.acceptedAnswer["@type"], "Answer");
+    assert.equal(entry.acceptedAnswer.text.replace(/\s+/g, " ").trim(), pair.a);
+  }
+  for (const file of ["index.html", "pro.html", "faq.html", "llms.txt"]) {
+    assert.doesNotMatch(readPublic(file), /payment link/i, file);
+  }
   const routed = await worker.fetch(new Request("https://sunsetping.com/faq"), testEnv(createDb()));
   assert.equal(await routed.text(), "/faq.html");
 });
