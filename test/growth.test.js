@@ -49,10 +49,10 @@ function home(score, extra = {}) {
   };
 }
 
-test("city catalog is fifty linked sunset places", () => {
-  assert.equal(CITIES.length, 50);
+test("city catalog is sixty-five linked sunset places", () => {
+  assert.equal(CITIES.length, 65);
   const slugs = CITIES.map((city) => city.slug);
-  assert.equal(new Set(slugs).size, 50);
+  assert.equal(new Set(slugs).size, 65);
   for (const slug of HOTSPOTS) assert.ok(slugs.includes(slug));
   for (const city of CITIES) {
     assert.equal(city.spots.length, 3);
@@ -68,7 +68,7 @@ test("sunset index and city pages are crawlable HTML", async () => {
   assert.equal(index.status, 200);
   assert.match(index.headers.get("content-type"), /text\/html/);
   const indexHtml = await index.text();
-  assert.match(indexHtml, /Sunset forecasts for 50 cities/);
+  assert.match(indexHtml, new RegExp(`Sunset forecasts for ${CITIES.length} cities`));
   assert.match(indexHtml, /rel="canonical" href="https:\/\/sunsetping.com\/sunset"/);
   for (const city of CITIES) assert.match(indexHtml, new RegExp(`href="/sunset/${city.slug}"`));
 
@@ -112,7 +112,7 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
     assert.match(xml, new RegExp(`<loc>${path}</loc>`));
   }
   for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc>`));
-  assert.equal(xml.match(/<loc>/g).length, 54);
+  assert.equal(xml.match(/<loc>/g).length, 69);
   const lastmod = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
     year: "numeric",

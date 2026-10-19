@@ -38,7 +38,7 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 
 - [Home](https://sunsetping.com/): check tonight's sunset
 - [FAQ](https://sunsetping.com/faq): what it is, how scoring works, free versus Pro, pricing
-- [City index](https://sunsetping.com/sunset): 50 city forecast pages
+- [City index](https://sunsetping.com/sunset): 65 city forecast pages
 - [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, and tonight's score in the HTML
 - [Pro](https://sunsetping.com/pro): yearly plan is the default offer
 - [Sitemap](https://sunsetping.com/sitemap.xml)
