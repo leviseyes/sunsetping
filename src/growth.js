@@ -201,7 +201,7 @@ const SCORE_SCRIPT = `<script>
 export function sunsetIndex(env) {
   const base = origin(env);
   const canonical = `${base}/sunset`;
-  const title = "Sunset forecasts for 50 cities";
+  const title = `Sunset forecasts for ${CITIES.length} cities`;
   const description = "Tonight's sunset score for Sedona, Malibu, Key West, Maui, Big Sur, and other cities people actually go to watch the sky.";
   const cards = [...CITIES].sort((a, b) => a.city.localeCompare(b.city)).map((city) =>
     `<a href="/sunset/${esc(city.slug)}"><strong>${esc(city.city)}</strong><span>${esc(city.region)}</span></a>`
