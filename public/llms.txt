@@ -22,14 +22,14 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 
 - SunsetPing is free. The price is 0.
 - Checking a score does not require an account.
-- Free alerts include up to 10 saved spots, sunrise alerts, a 7-day outlook, a day-before heads-up at 4:00 PM local, a minimum-score threshold, and a best-spot ranking in the evening email.
+- Free alerts include up to 10 saved spots, sunrise alerts, a 7-day sunset quality outlook by email, golden hour and blue hour times, a day-before heads-up at 4:00 PM local, an optional 8+ nights only setting, a sunset shooting cheat sheet, photo of the month, first access to upcoming aurora and fog alerts, and a best-spot ranking in the evening email.
 - Sign up at https://sunsetping.com/#signup. There is no paid plan.
 
 ## Common questions
 
 - What is SunsetPing? SunsetPing tells landscape photographers whether the light is worth the drive. You type a city or ZIP code and get a score from 1 to 10, the local sunset time, a short viewing window, and one sentence on why. You can also get a free email the same day. Checking a score does not require an account.
 - How does the sunset score work? The score is a whole number from 1 to 10. It uses the weather in the hour around sunset: low cloud, mid cloud, and high cloud, plus humidity, visibility, and precipitation. Enough broken cloud to catch the color scores higher. A thick low blanket, rain, or poor visibility scores lower. A completely clear sky also scores lower, because there is little for the light to catch. 8 or above means don't miss it. 6 or 7 is worth stepping outside. 4 or 5 is a quick peek. 3 or below means you can probably skip tonight.
-- What do free alerts include? A home location plus up to 10 saved spots, sunrise alerts, a 7-day sunset outlook, a day-before heads-up at 4:00 PM local, a score threshold, and a best-spot ranking in the evening email. The price is 0.
+- What do free alerts include? A home location plus up to 10 saved spots, sunrise alerts, a 7-day sunset quality outlook by email, golden hour and blue hour times, a day-before heads-up at 4:00 PM local, an optional 8+ nights only setting, a sunset shooting cheat sheet, photo of the month, first access to upcoming aurora and fog alerts, and a best-spot ranking in the evening email. The price is 0.
 - How much does SunsetPing cost? SunsetPing is free. The price is 0. Sign up with an email and a city. There is no paid plan.
 - How do alerts arrive? The sunset alert is about three hours ahead. Sunrise alerts are about an hour ahead when turned on, and a day-before note goes out at 4:00 PM local when turned on.
 - How do I cancel or unsubscribe? Every alert email has an unsubscribe link that stops future emails.
@@ -38,6 +38,7 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 
 - [Home](https://sunsetping.com/#signup): free sunset and golden-hour alerts
 - [FAQ](https://sunsetping.com/faq): what it is, how scoring works, what the free alerts include
+- [Photo of the month](https://sunsetping.com/photo-of-the-month): subscribers reply to any SunsetPing email; the winner is featured on the site, in the newsletter, and @MosheLevis on X
 - [City index](https://sunsetping.com/sunset): 65 city forecast pages
 - [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, tonight's score, and sunset times for the next 7 days in the HTML
 - [Sitemap](https://sunsetping.com/sitemap.xml)

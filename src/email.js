@@ -21,6 +21,21 @@ function rankingBlock(ranking) {
   return `<p style="font-size:15px;color:#1f2937;margin:18px 0 8px"><b>Best of your spots tonight</b></p><ol style="margin:0 0 8px;padding-left:20px;color:#4b5563;font-size:15px">${items}</ol>`;
 }
 
+function lightBlock(spots) {
+  if (!Array.isArray(spots) || !spots.length) return "";
+  const items = spots.map((spot) => {
+    const place = spot.location ? `<b>${escapeHtml(spot.location)}</b> — ` : "";
+    return `<li style="margin:0 0 6px">${place}golden hour ${escapeHtml(spot.goldenHourStart)}, sunset ${escapeHtml(spot.sunset)}, blue hour ${escapeHtml(spot.blueHourStart)}–${escapeHtml(spot.blueHourEnd)}</li>`;
+  }).join("");
+  return `<p style="font-size:15px;color:#1f2937;margin:18px 0 8px"><b>Light plan</b></p><ul style="margin:0 0 8px;padding-left:20px;color:#4b5563;font-size:15px">${items}</ul>`;
+}
+
+export function qualityOutlookBlock(days) {
+  if (!Array.isArray(days) || !days.length) return "";
+  const items = days.map((day) => `<li style="margin:0 0 4px"><b>${escapeHtml(day.date)}</b> — ${escapeHtml(day.score)}/10, ${escapeHtml(day.verdict)}, sunset ${escapeHtml(day.sunset)}</li>`).join("");
+  return `<p style="font-size:15px;color:#1f2937;margin:18px 0 8px"><b>Your 7-day sunset quality outlook</b></p><ol style="margin:0 0 8px;padding-left:20px;color:#4b5563;font-size:15px">${items}</ol>`;
+}
+
 function shareBlock(href, when) {
   const label = when === "sunrise" ? "Share this sunrise forecast" : when === "tomorrow" ? "Share tomorrow's forecast" : "Share tonight's forecast";
   return `<p style="font-size:15px;margin:12px 0 0"><a href="${escapeHtml(href)}" style="color:#c4541a">${label}</a></p>`;
@@ -31,7 +46,7 @@ function shareBlock(href, when) {
  * `when` is "tonight" | "tomorrow" | "sunrise".
  * Pass unsubscribeUrl to replace the {{unsubscribe_url}} placeholder.
  */
-export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = "tonight", ranking = null, shareUrl = "" } = {}) {
+export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = "tonight", ranking = null, shareUrl = "", light = null, outlook = null } = {}) {
   const c = r.score >= 6 ? "#f97316" : "#64748b";
   const e = {
     date: escapeHtml(r.date),
@@ -53,6 +68,7 @@ export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = 
       : "Tip: the best color usually shows up 5–15 minutes <i>after</i> the sun drops.";
   const safeUrl = escapeHtml(unsubscribeUrl);
   const share = shareUrl || `https://sunsetping.com/s/${encodeURIComponent(r.location)}`;
+  const windowLine = Array.isArray(light) && light.length ? lightBlock(light) : viewingLine(r.viewing);
   const extra = shareBlock(share, when);
   return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
@@ -65,7 +81,8 @@ export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = 
 <tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
 <p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">${sentence}</p>
 <p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">${e.reason}</p>
-${viewingLine(r.viewing)}
+${windowLine}
+${qualityOutlookBlock(outlook)}
 ${rankingBlock(ranking)}
 ${extra}
 <p style="font-size:14px;color:#6f655d;margin:16px 0 0;line-height:1.5">${tip}</p>
@@ -98,7 +115,7 @@ export function welcomeSubject(location) {
  * First-signup note. Same cream card as the daily alert.
  * Omit the score block when tonight is missing.
  */
-export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl }) {
+export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl, downloads = [] }) {
   const place = escapeHtml(location);
   const safeUrl = escapeHtml(unsubscribeUrl);
   const hasScore = tonight && tonight.score != null && tonight.score !== "";
@@ -116,6 +133,12 @@ export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl })
     ? `<p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">${escapeHtml(tonight.reason)}</p>`
     : "";
   const perks = FREE_PERKS.map((line) => `<li style="margin:0 0 4px">${escapeHtml(line)}</li>`).join("");
+  const placeName = String(location || "").trim();
+  const intro = placeName
+    ? `You're in. We'll email you before sunset in <b>${place}</b>.`
+    : "You're in. Add a city whenever you like and we'll email you before sunset.";
+  const downloadHtml = (downloads || []).map((item) => `<a href="${escapeHtml(item.href)}" style="color:#c4541a">${escapeHtml(item.label)}</a>`).join("<br>");
+  const files = downloadHtml ? `<p style="font-size:15px;color:#1c1612;margin:16px 0 8px;line-height:1.55">${downloadHtml}</p>` : "";
   return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
 <table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
@@ -123,8 +146,9 @@ export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl })
 <div style="font-size:12px;letter-spacing:3px;color:#6f655d">SUNSETPING · ${kicker}</div>
 ${scoreBlock}</td></tr>
 <tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
-<p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">You're in. We'll email you before sunset in <b>${place}</b>.</p>
+<p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">${intro}</p>
 <p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">Know when the light will be good before you drive out. The same-day note arrives about 3 hours before sunset.</p>
+${files}
 ${tonightLine}${reason}
 <p style="font-size:16px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>Included free</b></p>
 <ul style="margin:0 0 16px;padding-left:20px;color:#4b5563;font-size:15px">${perks}</ul>
@@ -189,7 +213,7 @@ function moreOutlook(rest) {
  * Weekly issue, same cream card as the daily alert.
  * Pass unsubscribeUrl to replace the {{unsubscribe_url}} placeholder.
  */
-export function renderNewsletter(input, { unsubscribeUrl = "{{unsubscribe_url}}" } = {}) {
+export function renderNewsletter(input, { unsubscribeUrl = "{{unsubscribe_url}}", outlook = null } = {}) {
   const content = normalizeNewsletter(input);
   const lead = content.highlights[0] || { location: "", night: "", score: null, verdict: "", blurb: "" };
   const c = lead.score != null && lead.score >= 6 ? "#f97316" : "#64748b";
@@ -221,7 +245,8 @@ export function renderNewsletter(input, { unsubscribeUrl = "{{unsubscribe_url}}"
 <div style="font-size:28px;line-height:1.2;margin:18px 0 0;font-family:Georgia,'Times New Roman',serif">This week's best sunset outlook</div>
 ${scoreBlock}${verdict}</td></tr>
 <tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
-${where}${blurb}${moreOutlook(content.highlights.slice(1))}${tip}${feature}
+${where}${blurb}${moreOutlook(content.highlights.slice(1))}${qualityOutlookBlock(outlook)}${tip}${feature}
+<p style="font-size:14px;color:#6f655d;margin:16px 0 0;line-height:1.5">Photo of the month: reply to any SunsetPing email with your best sunset shot. The winner is featured on the site and @MosheLevis on X.</p>
 </td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
 You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;

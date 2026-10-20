@@ -119,6 +119,7 @@ export function createDb(initial = {}) {
         existing.lon = args[3];
         existing.tz = args[4];
         existing.status = "active";
+        if (args.length > 6) existing.score_threshold = args[6];
       } else {
         state.subscribers.push({
           id: ++state.nextId,
@@ -130,7 +131,7 @@ export function createDb(initial = {}) {
           unsubscribe_token: args[5],
           status: "active",
           plan: "free",
-          score_threshold: null,
+          score_threshold: args.length > 6 ? args[6] : null,
           sunrise_alerts: 0,
           day_before: 0,
           lead_minutes: 180,

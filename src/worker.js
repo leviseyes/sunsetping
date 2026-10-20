@@ -6,6 +6,7 @@ import { ogSvg, sharePage, simplePage, welcomeOfferHtml, welcomePage } from "./p
 import { deliverWelcome, loadTonight } from "./welcome.js";
 import { stripeWebhook } from "./stripe.js";
 import { growthRoute } from "./growth.js";
+import { downloadLinks, moshPdfUrl, wantsGreatNights } from "./signup.js";
 
 const json = (o, status = 200, extra = {}) =>
   new Response(JSON.stringify(o), {
@@ -57,34 +58,45 @@ async function subscribe(req, env, ctx) {
   const fail = (message, status = 400) => (asJson ? json({ ok: false, error: message }, status) : simplePage("Hmm…", message, status));
   const email = String(body.email || "").trim().toLowerCase();
   const location = String(body.location || "").trim().slice(0, 100);
+  const threshold = wantsGreatNights(body.great_only) ? 8 : null;
   if (!EMAIL_RE.test(email) || email.length > 254) return fail("Please enter a valid email.");
-  if (location.length < 2) return fail("Please enter a city or ZIP code.");
-  let place;
-  try {
-    place = await resolvePlace({ q: location });
-  } catch (err) {
-    if (err instanceof HttpError && err.status === 404) return fail("We couldn't find that location. Try a city name.");
-    return fail("We couldn't look up that location. Try again.", 502);
+  if (location.length === 1) return fail("Please enter a city or ZIP code, or leave it blank.");
+  let place = null;
+  if (location.length >= 2) {
+    try {
+      place = await resolvePlace({ q: location });
+    } catch (err) {
+      if (err instanceof HttpError && err.status === 404) return fail("We couldn't find that location. Try a city name.");
+      return fail("We couldn't look up that location. Try again.", 502);
+    }
   }
   const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
-  const tz = place.timezone || body.tz || null;
-  const prior = await env.DB.prepare("SELECT id FROM subscribers WHERE email = ?1").bind(email).first();
+  const prior = await env.DB.prepare(
+    "SELECT id, location, lat, lon, tz FROM subscribers WHERE email = ?1"
+  ).bind(email).first();
   const isNew = !prior;
+  const stored = {
+    location: place ? place.name : (prior?.location || ""),
+    lat: place ? place.latitude : (prior?.lat ?? null),
+    lon: place ? place.longitude : (prior?.lon ?? null),
+    tz: place ? (place.timezone || body.tz || null) : (prior?.tz || body.tz || null),
+  };
   await env.DB.prepare(
-    `INSERT INTO subscribers (email, location, lat, lon, tz, unsubscribe_token, status) VALUES (?1,?2,?3,?4,?5,?6,'active')
-     ON CONFLICT(email) DO UPDATE SET location=?2, lat=?3, lon=?4, tz=?5, status='active'`
-  ).bind(email, place.name, place.latitude, place.longitude, tz, token).run();
+    `INSERT INTO subscribers (email, location, lat, lon, tz, unsubscribe_token, status, score_threshold) VALUES (?1,?2,?3,?4,?5,?6,'active',?7)
+     ON CONFLICT(email) DO UPDATE SET location=?2, lat=?3, lon=?4, tz=?5, status='active', score_threshold=?7`
+  ).bind(email, stored.location, stored.lat, stored.lon, stored.tz, token, threshold).run();
   const row = await env.DB.prepare(
     "SELECT id, email, location, unsubscribe_token FROM subscribers WHERE email = ?1"
   ).bind(email).first();
-  const tonight = await loadTonight(place);
-  const offer = { location: place.name, email, tonight };
+  const tonight = place ? await loadTonight(place) : null;
+  const downloads = downloadLinks(env);
+  const offer = { location: stored.location, email, tonight, downloads };
   if (isNew && row?.id) {
-    const task = deliverWelcome({ env, subscriber: { ...row, location: place.name }, tonight });
+    const task = deliverWelcome({ env, subscriber: { ...row, location: stored.location }, tonight });
     if (typeof ctx?.waitUntil === "function") ctx.waitUntil(task);
     else await task;
   }
-  if (asJson) return json({ ok: true, location: place.name, tonight, offerHtml: welcomeOfferHtml(offer) });
+  if (asJson) return json({ ok: true, location: stored.location, tonight, downloads, offerHtml: welcomeOfferHtml(offer) });
   return welcomePage(offer);
 }
 
@@ -166,6 +178,14 @@ async function handleApi(req, url, env, ctx) {
       timezone: result.days[0].timezone,
       days: result.days.map(publicDay),
     }, 200, { "cache-control": "public, max-age=600" });
+  }
+
+  if (url.pathname === "/api/perks") {
+    if (req.method !== "GET") return json({ error: "GET only" }, 405);
+    return json({
+      moshPdfUrl: moshPdfUrl(env),
+      cheatSheetUrl: "/downloads/sunset-cheat-sheet.pdf",
+    });
   }
 
   if (url.pathname === "/api/best-spot") {
@@ -300,6 +320,11 @@ export default {
       if (url.pathname === "/pro" || url.pathname === "/pro/" || url.pathname === "/pro.html") {
         return Response.redirect(new URL("/#signup", url), 301);
       }
+      if (url.pathname === "/photo-of-the-month" || url.pathname === "/photo-of-the-month/") {
+        const assetUrl = new URL(req.url);
+        assetUrl.pathname = "/photo-of-the-month.html";
+        return env.ASSETS.fetch(new Request(assetUrl, req));
+      }
       if (url.pathname === "/faq" || url.pathname === "/faq/") {
         const assetUrl = new URL(req.url);
         assetUrl.pathname = "/faq.html";
@@ -324,7 +349,7 @@ export default {
         image.searchParams.set("verdict", day.verdict);
         image.searchParams.set("sunset", day.sunset);
         image.searchParams.set("date", day.date);
-        return sharePage({ score: day, canonical, image: image.toString() });
+        return sharePage({ score: day, canonical, image: image.toString(), showMosh: Boolean(moshPdfUrl(env)) });
       }
       return env.ASSETS.fetch(req);
     } catch (err) {

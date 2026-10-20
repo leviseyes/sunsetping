@@ -45,6 +45,7 @@
     <nav>
       <a href="#check">Tonight</a>
       <a href="/sunset">Cities</a>
+      <a href="/photo-of-the-month">Photo</a>
       <a href="#signup">Free alerts</a>
     </nav>
   </header>
@@ -53,12 +54,22 @@
     <h1>Know when the light will be good before you drive out.</h1>
     <p class="sub">Free sunset and golden-hour quality alerts. A 1–10 score for the sky, before you pack the car.</p>
     <div class="hero-signup" id="signup" data-welcome-host>
+      <h2>Know when the light will be good before you drive out</h2>
+      <ul class="perk-list">
+        <li>7-day sunset quality outlook, free by email</li>
+        <li>8+ only alerts. Never waste a drive.</li>
+        <li>Golden hour and blue hour times in every alert</li>
+        <li>Sunset shooting cheat sheet</li>
+        <li>Photo of the month: reply with your best sunset shot</li>
+        <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
+      </ul>
       <form class="signup" action="/api/subscribe" method="post" data-signup>
         <label class="sr-only" for="hero-email">Email</label>
         <input id="hero-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-        <label class="sr-only" for="hero-location">City or park</label>
-        <input id="hero-location" type="text" name="location" placeholder="City or park" required maxlength="100" aria-label="City or park">
+        <label class="sr-only" for="hero-location">City or ZIP, optional</label>
+        <input id="hero-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
         <input type="hidden" name="tz">
+        <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
         <button type="submit">Get free alerts</button>
       </form>
     </div>
@@ -77,15 +88,23 @@
       <p class="empty">A score from 1 to 10, the hour to be outside, and why the sky looks that way.</p>
     </div>
     <div class="signup-block" data-welcome-host>
-      <h2>Want this before you drive out?</h2>
-      <p class="lede">Free sunset and golden-hour quality alerts. Unsubscribe any time.</p>
+      <h2>Know when the light will be good before you drive out</h2>
+      <ul class="perk-list">
+        <li>7-day sunset quality outlook, free by email</li>
+        <li>8+ only alerts. Never waste a drive.</li>
+        <li>Golden hour and blue hour times in every alert</li>
+        <li>Sunset shooting cheat sheet</li>
+        <li>Photo of the month: reply with your best sunset shot</li>
+        <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
+      </ul>
       <form class="signup" action="/api/subscribe" method="post" data-signup>
         <label class="sr-only" for="email">Email</label>
         <input id="email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-        <label class="sr-only" for="location">City or park</label>
-        <input id="location" type="text" name="location" placeholder="City or park" required maxlength="100" aria-label="City or park">
+        <label class="sr-only" for="location">City or ZIP, optional</label>
+        <input id="location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
         <input type="hidden" name="tz">
-        <button type="submit">Get my free alerts</button>
+        <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
+        <button type="submit">Get free alerts</button>
       </form>
     </div>
   </div>
@@ -190,23 +209,41 @@
 <footer class="site-footer">
   <form class="footer-signup" action="/api/subscribe" method="post" data-signup>
     <p>Free sunset alerts</p>
+    <ul class="perk-list">
+      <li>7-day sunset quality outlook, free by email</li>
+      <li>8+ only alerts. Never waste a drive.</li>
+      <li>Golden hour and blue hour times in every alert</li>
+      <li>Sunset shooting cheat sheet</li>
+      <li>Photo of the month: reply with your best sunset shot</li>
+      <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
+    </ul>
     <label class="sr-only" for="footer-email">Email</label>
     <input id="footer-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-    <label class="sr-only" for="footer-location">City or park</label>
-    <input id="footer-location" type="text" name="location" placeholder="City or park" required maxlength="100" aria-label="City or park">
+    <label class="sr-only" for="footer-location">City or ZIP, optional</label>
+    <input id="footer-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
     <input type="hidden" name="tz">
+    <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
     <button type="submit">Email me</button>
   </form>
-  <p class="footer-links">© 2026 SunsetPing · sunsetping.com · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="#signup">Get free alerts</a></p>
+  <p class="footer-links">© 2026 SunsetPing · sunsetping.com · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/photo-of-the-month">Photo of the month</a> · <a href="#signup">Get free alerts</a></p>
 </footer>
 <aside class="signup-sticky" data-welcome-host>
   <form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup>
     <p class="signup-sticky-copy">Know when the light will be good before you drive out.</p>
+    <ul class="perk-list">
+      <li>7-day sunset quality outlook, free by email</li>
+      <li>8+ only alerts. Never waste a drive.</li>
+      <li>Golden hour and blue hour times in every alert</li>
+      <li>Sunset shooting cheat sheet</li>
+      <li>Photo of the month: reply with your best sunset shot</li>
+      <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
+    </ul>
     <label class="sr-only" for="sticky-email">Email</label>
     <input id="sticky-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-    <label class="sr-only" for="sticky-location">City or park</label>
-    <input id="sticky-location" type="text" name="location" placeholder="City or park" required maxlength="100" aria-label="City or park">
+    <label class="sr-only" for="sticky-location">City or ZIP, optional</label>
+    <input id="sticky-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
     <input type="hidden" name="tz">
+    <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
     <button type="submit">Get free alerts</button>
   </form>
 </aside>

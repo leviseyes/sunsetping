@@ -1,6 +1,7 @@
 import { normalizeNewsletter, newsletterSubject, renderNewsletter } from "./email.js";
+import { fetchForecast } from "./openmeteo.js";
 import { sendEmail } from "./sender.js";
-import { wallParts } from "./scoring.js";
+import { scoreForecastDay, wallParts, withZoneAbbrev } from "./scoring.js";
 
 /** Issue weeks are dated in Pacific time, where Thursday morning is the send window. */
 export const NEWSLETTER_TZ = "America/Los_Angeles";
@@ -78,6 +79,21 @@ export function authorizeCron(req, env) {
   return mismatch === 0;
 }
 
+async function personalOutlook(sub, fetchImpl) {
+  const forecast = await fetchForecast(sub.lat, sub.lon, 7, fetchImpl);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const scored = withZoneAbbrev(scoreForecastDay(forecast, i, {
+      location: sub.location,
+      lat: sub.lat,
+      lon: sub.lon,
+    }));
+    if (!scored || scored.score == null) continue;
+    days.push({ date: scored.date, score: scored.score, verdict: scored.verdict, sunset: scored.sunset });
+  }
+  return days;
+}
+
 async function recordSend(db, subscriberId, localDate) {
   try {
     await db.prepare("INSERT INTO alert_sends (subscriber_id, kind, local_date) VALUES (?1, ?2, ?3)").bind(subscriberId, "newsletter", localDate).run();
@@ -108,7 +124,7 @@ export async function runWeeklyNewsletter(env, content = {}, now = new Date(), d
   let listed;
   try {
     listed = await db.prepare(
-      "SELECT id, email, plan, status, unsubscribe_token FROM subscribers WHERE status = 'active'"
+      "SELECT id, email, location, lat, lon, tz, plan, status, unsubscribe_token FROM subscribers WHERE status = 'active'"
     ).all();
   } catch (err) {
     summary.errors = 1;
@@ -129,8 +145,17 @@ export async function runWeeklyNewsletter(env, content = {}, now = new Date(), d
         continue;
       }
       const plan = sub.plan === "pro" ? "pro" : "free";
+      let outlook = null;
+      if (sub.lat != null && sub.lon != null) {
+        try {
+          outlook = await personalOutlook(sub, deps.forecastFetch || fetch);
+        } catch (err) {
+          console.log(JSON.stringify({ event: "newsletter_outlook_error", email: sub.email, message: String(err?.message || err) }));
+        }
+      }
       const html = renderNewsletter(issue, {
         plan,
+        outlook,
         unsubscribeUrl: `${base}/api/unsubscribe?token=${sub.unsubscribe_token}`,
       });
       const result = await send({ to: sub.email, subject: newsletterSubject(issue), html, from });

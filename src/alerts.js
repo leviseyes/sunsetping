@@ -1,5 +1,6 @@
 import { fetchForecast } from "./openmeteo.js";
 import { rankScores, scoreForecastDay, tzAbbrev, wallParts, zonedWallToUtc } from "./scoring.js";
+import { eveningLightPlan } from "./solar.js";
 import { emailSubject, renderEmail } from "./email.js";
 import { sendEmail } from "./sender.js";
 
@@ -35,6 +36,28 @@ export function shiftDate(isoDate, days) {
 function passesThreshold(subscriber, score) {
   if (subscriber.score_threshold == null || subscriber.score_threshold === "") return true;
   return score >= Number(subscriber.score_threshold);
+}
+
+function lightSpot(scored, timeZone) {
+  if (!scored) return null;
+  const date = String(scored.sunsetIso || "").slice(0, 10);
+  const computed = scored.lat != null && scored.lon != null
+    ? eveningLightPlan({
+      lat: Number(scored.lat),
+      lon: Number(scored.lon),
+      date,
+      timeZone: scored.timezone || timeZone || "UTC",
+    })
+    : null;
+  const viewing = scored.viewing || {};
+  const plan = computed || (viewing.goldenHourStart ? {
+    goldenHourStart: viewing.goldenHourStart,
+    sunset: viewing.sunset || scored.sunset,
+    blueHourStart: viewing.goldenHourEnd || scored.sunset,
+    blueHourEnd: viewing.blueHourEnd,
+  } : null);
+  if (!plan?.goldenHourStart || !plan.sunset || !plan.blueHourStart || !plan.blueHourEnd) return null;
+  return { location: scored.location || "", ...plan };
 }
 
 function dedupeScores(scores) {
@@ -148,11 +171,22 @@ export async function runAlerts(env, now = new Date(), deps = {}) {
     summary.considered++;
     if (sub.lat == null || sub.lon == null) continue;
     try {
-      const forecast = await fetchForecast(sub.lat, sub.lon, 2, fetchImpl);
+      const forecast = await fetchForecast(sub.lat, sub.lon, 7, fetchImpl);
       const meta = { location: sub.location, lat: sub.lat, lon: sub.lon };
-      const home = withTz(scoreForecastDay(forecast, 0, meta));
-      const tomorrow = withTz(scoreForecastDay(forecast, 1, meta));
+      const scoredDays = [];
+      for (let i = 0; i < 7; i++) {
+        const day = withTz(scoreForecastDay(forecast, i, meta));
+        if (day) scoredDays.push(day);
+      }
+      const home = scoredDays[0] || null;
+      const tomorrow = scoredDays[1] || null;
       if (home && !home.tz && home.timezone) home.tz = tzAbbrev(home.timezone, zonedWallToUtc(home.sunsetIso, home.timezone));
+      const outlook = scoredDays.map((day) => ({
+        date: day.date,
+        score: day.score,
+        verdict: day.verdict,
+        sunset: day.sunset,
+      }));
       const spotScores = [];
       if (home) {
         spotScores.push(home);
@@ -173,12 +207,16 @@ export async function runAlerts(env, now = new Date(), deps = {}) {
           console.log(JSON.stringify({ event: "alert_skipped", reason: action.skip, email: sub.email, kind: action.kind, score: action.score }));
           continue;
         }
+        const tz = home?.timezone || sub.tz || "UTC";
+        const lightSources = spotScores.length ? spotScores : (home ? [home] : []);
         const html = renderEmail(action.score, {
           when: action.when,
           ranking: action.ranking,
           plan: sub.plan === "pro" ? "pro" : "free",
           shareUrl: `${base}/s/${encodeURIComponent(action.score.location)}`,
           unsubscribeUrl: `${base}/api/unsubscribe?token=${sub.unsubscribe_token}`,
+          light: lightSources.map((spot) => lightSpot(spot, tz)).filter(Boolean),
+          outlook,
         });
         const result = await send({ to: sub.email, subject: emailSubject(action.score, action.when), html });
         if (!result.ok) {

@@ -141,6 +141,47 @@ document.querySelectorAll("form[data-signup]").forEach((form) => {
   });
 });
 
+document.querySelectorAll('input[name="tz"]').forEach((el) => {
+  try { el.value = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch { /* leave blank */ }
+});
+
+async function syncMoshBonus() {
+  let url = "";
+  try {
+    const res = await fetch("/api/perks");
+    const data = await res.json();
+    url = String(data.moshPdfUrl || "").trim();
+  } catch {
+    url = "";
+  }
+  if (!url) {
+    document.querySelectorAll("[data-mosh-bonus]").forEach((el) => el.remove());
+    document.querySelectorAll("[data-mosh-perk]").forEach((el) => {
+      el.removeAttribute("data-mosh-perk");
+      el.textContent = "Sunset shooting cheat sheet";
+    });
+    return;
+  }
+  document.querySelectorAll(".perk-list").forEach((list) => {
+    let item = list.querySelector("[data-mosh-perk]");
+    if (!item) item = [...list.children].find((li) => /cheat sheet/i.test(li.textContent || ""));
+    if (!item) return;
+    item.setAttribute("data-mosh-perk", "");
+    item.textContent = "Sunset cheat sheet and the MOSH Planner PDF";
+  });
+  document.querySelectorAll("[data-welcome-host], .signup-block").forEach((host) => {
+    if (host.querySelector("[data-mosh-bonus]")) return;
+    const form = host.querySelector("form");
+    if (!form) return;
+    const note = document.createElement("p");
+    note.className = "bonus";
+    note.setAttribute("data-mosh-bonus", "");
+    note.textContent = "Free bonus: get the MOSH Planner PDF when you sign up.";
+    form.before(note);
+  });
+}
+syncMoshBonus();
+
 document.getElementById("geo")?.addEventListener("click", () => {
   if (!navigator.geolocation) {
     resultEl.innerHTML = `<p class="error-banner">This browser can't share a location. Type a city instead.</p>`;
