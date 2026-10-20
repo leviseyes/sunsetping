@@ -120,6 +120,9 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.equal(data.viewing.blueHourEnd, "7:39 PM");
     assert.ok(html.includes(esc(tonightSentence("Austin", data))));
     assert.match(html, /<title>Sunset time today in Austin: 6:59 PM · tonight 10\/10 · SunsetPing<\/title>/);
+    assert.match(html, /property="og:title" content="Sunset time today in Austin: 6:59 PM · tonight 10\/10 · SunsetPing"/);
+    assert.match(html, /name="twitter:title" content="Sunset time today in Austin: 6:59 PM · tonight 10\/10 · SunsetPing"/);
+    assert.match(html, /property="og:image" content="https:\/\/sunsetping.com\/og\/austin.png\?v=2"/);
     assert.match(html, /name="description" content="[^"]*Sunset time today in Austin is 6:59 PM CDT[^"]*10\/10/);
     assert.match(html, /<h1>Will tonight&#39;s sunset be good in Austin\?<\/h1>/);
     assert.match(html, /<p class="city-score"><strong>10\/10<\/strong>/);
@@ -203,6 +206,8 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(timeHtml, /<h1>What time is sunset today in Austin\?<\/h1>/);
     assert.match(timeHtml, /rel="canonical" href="https:\/\/sunsetping.com\/sunset-time\/austin"/);
     assert.match(timeHtml, /<title>Sunset Time Today in Austin: 6:59 PM \(10\/10\) · SunsetPing<\/title>/);
+    assert.match(timeHtml, /property="og:title" content="Sunset Time Today in Austin: 6:59 PM \(10\/10\) · SunsetPing"/);
+    assert.match(timeHtml, /property="og:image" content="https:\/\/sunsetping.com\/og\/austin.png\?v=2"/);
     assert.match(timeHtml, /Sunset times this week in Austin/);
     assert.match(timeHtml, /datetime="2026-10-21"/);
     assert.match(timeHtml, /Sunset times for the next 7 days are listed on this page/);

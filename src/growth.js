@@ -15,6 +15,11 @@ export const CITY_PAGE_CACHE_SECONDS = 1500;
  * short enough that a regenerated card replaces it after the next deploy.
  */
 export const OG_CARD_CACHE = "public, max-age=86400, s-maxage=86400";
+/**
+ * Bump when public/og/*.png changes. X caches the image by URL, so a card
+ * unfurled earlier stays on the old picture until this query string changes.
+ */
+export const OG_CARD_VERSION = "2";
 const CITY_SCORE_TIMEOUT_MS = 8000;
 const FALLBACK_CACHE = "public, max-age=60";
 
@@ -433,7 +438,7 @@ function cityHtml(env, city, score, variant = "") {
     title: isTime ? (score ? `Sunset Time Today in ${city.city}: ${score.sunset} (${score.score}/10) · SunsetPing` : `Sunset Time Today in ${city.city} · SunsetPing`) : score ? cityPageTitle(city.city, score) : `${question} · SunsetPing`,
     description: described,
     canonical,
-    image: `${base}/og/${city.slug}.png`,
+    image: `${base}/og/${city.slug}.png?v=${OG_CARD_VERSION}`,
     jsonLd: [
       cityJsonLd({ base, canonical, city, score, description }),
       qa.length ? faqPageJsonLd(qa) : null,
