@@ -1,6 +1,5 @@
 import { renderWelcomeEmail, welcomeSubject } from "./email.js";
 import { forecastUrl } from "./openmeteo.js";
-import { proCheckoutPaths } from "./pages.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { sendEmail } from "./sender.js";
 
@@ -73,12 +72,9 @@ export async function deliverWelcome({ env, subscriber, tonight = null, fetchImp
     const claimed = await claimWelcome(env.DB, subscriber.id);
     if (!claimed) return { ok: true, skipped: "deduped" };
     const base = siteBase(env);
-    const links = proCheckoutPaths(subscriber.email);
     const html = renderWelcomeEmail({
       location: subscriber.location,
       tonight,
-      yearlyUrl: `${base}${links.yearly}`,
-      monthlyUrl: `${base}${links.monthly}`,
       unsubscribeUrl: `${base}/api/unsubscribe?token=${subscriber.unsubscribe_token}`,
     });
     return await sendEmail({

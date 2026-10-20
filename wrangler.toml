@@ -9,13 +9,9 @@ account_id = "1a01a80affd778e3dc5812bbdcd5dc84"
 #   NEWSLETTER_FROM                 — optional weekly From. Prefer SunsetPing <hello@sunsetping.com>.
 #                                     Falls back to EMAIL_FROM, then the alerts default.
 #   CRON_SECRET                     — bearer token for POST /api/cron/newsletter
-#   STRIPE_PAYMENT_LINK_MONTHLY     — Stripe Payment Link for Pro at $3.99/mo
-#   STRIPE_PAYMENT_LINK_YEARLY      — Stripe Payment Link for Pro at $29/yr
-#   STRIPE_PAYMENT_LINK             — optional fallback used when a plan-specific link is unset
-#   STRIPE_SECRET_KEY               — restricted key, Checkout Sessions write only.
-#                                     When set, GET /api/checkout creates a Checkout Session.
-#                                     If it is missing or Stripe errors, checkout falls back to the Payment Link.
 #   STRIPE_WEBHOOK_SECRET           — Stripe webhook signing secret (whsec_...) for POST /api/stripe/webhook
+#                                     GET /api/checkout no longer creates a session. It redirects to /#signup.
+#                                     Leave old Stripe secrets in place if a webhook is still configured.
 #   PUBLIC_BASE_URL                 — optional, defaults to https://sunsetping.com
 
 [assets]

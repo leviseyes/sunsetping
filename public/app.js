@@ -82,34 +82,12 @@ lookup?.addEventListener("submit", (event) => {
   showScore(`/api/score?q=${encodeURIComponent(q)}`);
 });
 
-function knownEmail() {
-  return [...document.querySelectorAll('input[type="email"]')].map((el) => el.value.trim()).find(Boolean) || "";
+function fillTimeZone() {
+  let tz = "";
+  try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch { tz = ""; }
+  document.querySelectorAll('input[name="tz"]').forEach((el) => { el.value = tz; });
 }
-
-function prefillCheckoutLinks() {
-  const email = knownEmail();
-  document.querySelectorAll('a[href*="/api/checkout"]').forEach((link) => {
-    const url = new URL(link.href, location.origin);
-    if (email) url.searchParams.set("email", email);
-    else url.searchParams.delete("email");
-    link.href = `${url.pathname}${url.search}`;
-  });
-}
-
-document.addEventListener("input", (event) => {
-  if (event.target?.type === "email") prefillCheckoutLinks();
-});
-document.querySelectorAll('a[href*="/api/checkout"]').forEach((link) => {
-  link.addEventListener("click", prefillCheckoutLinks);
-});
-
-if (new URLSearchParams(location.search).get("canceled") === "1") {
-  const note = document.createElement("p");
-  note.className = "checkout-note";
-  note.setAttribute("role", "status");
-  note.textContent = "No worries. Nothing was charged. Pro will be here when you want it.";
-  document.body.prepend(note);
-}
+fillTimeZone();
 
 function showSignupError(form, message) {
   let note = form.querySelector(".error-banner");

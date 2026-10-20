@@ -3,6 +3,7 @@ import { INDEXNOW_KEY } from "./indexnow.js";
 import { fetchForecast, resolvePlace } from "./openmeteo.js";
 import { simplePage } from "./pages.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
+import { weekSunsetTimes } from "./sun.js";
 
 const SITE = "https://sunsetping.com";
 const OG_IMAGE = `${SITE}/images/hero-sunset.jpg`;
@@ -60,13 +61,55 @@ ${imageMeta}
 <link rel="stylesheet" href="/styles.css">${ld}`;
 }
 
+const SIGNUP_HEADLINE = "Know when the light will be good before you drive out.";
+
 function topbar() {
   return `<header class="topbar"><a class="logo" href="/">SunsetPing</a>
-<nav><a href="/sunset">Cities</a><a href="/#pricing">Pricing</a><a href="/pro">Pro</a></nav></header>`;
+<nav><a href="/sunset">Cities</a><a href="/#check">Tonight</a><a href="/#signup">Free alerts</a></nav></header>`;
 }
 
-function footer() {
-  return `<footer>© 2026 SunsetPing · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/pro">Pro</a></footer>`;
+function locationField(location, id) {
+  if (location) return `<input type="hidden" name="location" value="${esc(location)}">`;
+  return `<label class="sr-only" for="${id}-location">City or ZIP</label><input id="${id}-location" type="text" name="location" placeholder="City or park" required maxlength="100" aria-label="City or ZIP" autocomplete="address-level2">`;
+}
+
+function signupFields({ id, location = "", button = "Get free alerts" }) {
+  return `<label class="sr-only" for="${id}-email">Email</label>
+<input id="${id}-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
+${locationField(location, id)}
+<input type="hidden" name="tz">
+<button class="btn" type="submit">${esc(button)}</button>`;
+}
+
+function inlineSignup(location = "") {
+  const place = location ? String(location).split(",")[0] : "";
+  const lede = place
+    ? `Free sunset and golden-hour quality alerts for landscape photographers. We'll email you before the light is worth the drive to ${place}.`
+    : "Free sunset and golden-hour quality alerts for landscape photographers. One email, before you pack the car.";
+  return `<section class="panel signup-block" id="signup" data-welcome-host>
+<h2>${esc(SIGNUP_HEADLINE)}</h2>
+<p>${esc(lede)}</p>
+<form class="stack" action="/api/subscribe" method="post" data-signup>
+${signupFields({ id: "city-signup", location, button: place ? `Alert me in ${place}` : "Get free alerts" })}
+</form>
+</section>`;
+}
+
+function stickySignup(location = "") {
+  return `<aside class="signup-sticky" data-welcome-host>
+<form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup>
+<p class="signup-sticky-copy">${esc(SIGNUP_HEADLINE)}</p>
+${signupFields({ id: "sticky", location })}
+</form>
+</aside>`;
+}
+
+function footer(location = "") {
+  return `<footer class="site-footer"><form class="footer-signup" action="/api/subscribe" method="post" data-signup>
+<p>Free sunset alerts</p>
+${signupFields({ id: "footer", location, button: "Email me" })}
+</form>
+<p class="footer-links">© 2026 SunsetPing · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/#signup">Get free alerts</a></p></footer>`;
 }
 
 function htmlResponse(html, status = 200, cacheControl = "public, max-age=3600") {
@@ -106,6 +149,12 @@ export function cityPageTitle(cityName, score) {
 export function cityMetaDescription(cityName, score) {
   const tz = score.tz ? ` ${score.tz}` : "";
   return `Sunset time today in ${cityName} is ${score.sunset}${tz}. Tonight's SunsetPing score is ${score.score}/10: ${score.verdict}.`;
+}
+
+function describeWithWeek(description, week) {
+  const alert = " Free sunset and golden-hour quality alerts for landscape photographers.";
+  if (!week?.days?.length) return `${description}${alert}`;
+  return `${description} Sunset times for the next 7 days are listed on this page.${alert}`;
 }
 
 /** Calendar date used as sitemap <lastmod> for city pages. US Pacific, so it stays "today" through the evening. */
@@ -162,10 +211,10 @@ const SCORE_SCRIPT = `<script>
     var note = slot.querySelector(".status");
     if (note) note.textContent = "Tonight's score will show here as soon as the forecast responds.";
   });
-  var zone = document.getElementById("tz");
-  if (zone) {
-    try { zone.value = Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (err) {}
-  }
+  try {
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.querySelectorAll('input[name="tz"]').forEach(function (zone) { zone.value = tz; });
+  } catch (err) {}
   var share = document.querySelector("[data-share-url]");
   var shareButton = document.getElementById("share-score");
   if (share && shareButton) {
@@ -217,7 +266,8 @@ ${topbar()}
 <h1>Will tonight's sunset be good where you're going?</h1>
 <p class="lede">Each page has tonight's score, the sunset time, a few places people stand, and a free alert prefilled with that city.</p>
 <nav class="city-list" aria-label="Sunset cities">${cards}</nav>
-</main>${footer()}</body></html>`;
+${inlineSignup()}
+</main>${footer()}${stickySignup()}<script src="/app.js" defer></script></body></html>`;
   return htmlResponse(html);
 }
 
@@ -291,6 +341,40 @@ function quickAnswersHtml(city, qa) {
   return `<section class="city-qa" aria-label="${esc(`Sunset in ${city.city} — quick answers`)}"><h2>Sunset in ${esc(city.city)} — quick answers</h2>${body}</section>`;
 }
 
+function weekJsonLd(city, week) {
+  if (!week?.days?.length) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Sunset times this week in ${city.city}`,
+    numberOfItems: week.days.length,
+    itemListOrder: "https://schema.org/ItemListOrderAscending",
+    itemListElement: week.days.map((day, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: day.label,
+      description: `Sunset ${day.sunset} ${day.tz}. Golden hour starts ${day.goldenHourStart} ${day.tz}.`,
+    })),
+  };
+}
+
+function weekTimesHtml(city, week) {
+  if (!week?.days?.length) return "";
+  const where = week.sameTz ? `${week.sameTz}, ${week.timeZone}` : week.timeZone;
+  const rows = week.days.map((day) =>
+    `<tr><td><time datetime="${esc(day.date)}">${esc(day.shortLabel)}</time></td><td>${esc(day.sunset)} ${esc(day.tz)}</td><td>${esc(day.goldenHourStart)} ${esc(day.tz)}</td></tr>`
+  ).join("");
+  return `<section class="week-times" id="sunset-week" aria-labelledby="sunset-week-title">
+<h2 id="sunset-week-title">Sunset times this week in ${esc(city.city)}</h2>
+<p class="week-note">Local time (${esc(where)}). Golden hour starts 60 minutes before sunset.</p>
+<div class="week-table"><table>
+<thead><tr><th scope="col">Date</th><th scope="col">Sunset</th><th scope="col">Golden hour starts</th></tr></thead>
+<tbody>${rows}</tbody>
+</table></div>
+<p class="week-cta">Want a note when one of these evenings will actually be good? <a href="#signup">Get free sunset and golden-hour alerts</a>.</p>
+</section>`;
+}
+
 function cityJsonLd({ base, canonical, city, score, description }) {
   const question = `Will tonight's sunset be good in ${city.city}?`;
   const ld = {
@@ -341,15 +425,18 @@ function cityHtml(env, city, score, variant = "") {
     : `Tonight's sunset in ${city.city}`;
   const shareHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(canonical)}`;
   const qa = cityQuickAnswers(city, score);
+  const week = score?.week?.days?.length ? score.week : null;
+  const described = describeWithWeek(description, week);
   return `<!doctype html><html lang="en"><head>${head({
     title: isTime ? (score ? `Sunset Time Today in ${city.city}: ${score.sunset} (${score.score}/10) · SunsetPing` : `Sunset Time Today in ${city.city} · SunsetPing`) : score ? cityPageTitle(city.city, score) : `${question} · SunsetPing`,
-    description,
+    description: described,
     canonical,
     image: `${base}/og/${city.slug}.png`,
     jsonLd: [
       cityJsonLd({ base, canonical, city, score, description }),
       qa.length ? faqPageJsonLd(qa) : null,
       breadcrumbJsonLd(base, city),
+      weekJsonLd(city, week),
     ],
   })}</head>
 <body><main class="wrap doc">
@@ -358,6 +445,7 @@ ${topbar()}
 <h1>${esc(question)}</h1>
 <p class="lede">${esc(city.tip)}</p>
 ${liveScoreHtml(city, score)}
+${weekTimesHtml(city, week)}
 ${quickAnswersHtml(city, qa)}
 <div class="tips">
 <section>
@@ -372,22 +460,11 @@ ${quickAnswersHtml(city, qa)}
 </p>
 </div>
 </section>
-<section class="panel" data-welcome-host>
-<h2>Free alert for ${esc(city.city)}</h2>
-<p>One place, the same day, before the color fades. Unsubscribe any time.</p>
-<form class="stack" action="/api/subscribe" method="post" data-signup>
-<label class="sr-only" for="email">Email</label>
-<input id="email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-<label class="sr-only" for="location">City</label>
-<input id="location" type="text" name="location" value="${esc(city.query)}" required maxlength="100" aria-label="City">
-<input type="hidden" name="tz" id="tz">
-<button class="btn" type="submit">Alert me in ${esc(city.city)}</button>
-</form>
-</section>
+${inlineSignup(city.query)}
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/sunset">All cities</a></nav>
 <p>${isTime ? `<a href="/sunset/${esc(city.slug)}">Will tonight's sunset be good in ${esc(city.city)}?</a>` : `<a href="/sunset-time/${esc(city.slug)}">Sunset time today in ${esc(city.city)}</a>`}</p>
-</main>${footer()}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
+</main>${footer(city.query)}${stickySignup(city.query)}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
 }
 
 function cityResponse(html, score) {
@@ -446,7 +523,15 @@ async function loadTonight(query, fetchImpl) {
   const presented = withZoneAbbrev(scored);
   if (!presented) return null;
   const dateModified = String(scored.sunsetIso || "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateModified) ? { ...presented, dateModified } : presented;
+  const withDate = /^\d{4}-\d{2}-\d{2}$/.test(dateModified) ? { ...presented, dateModified } : presented;
+  const week = weekSunsetTimes({
+    lat: scored.lat,
+    lon: scored.lon,
+    timeZone: scored.timezone,
+    startDate: dateModified,
+    forecastSunsetIso: scored.sunsetIso,
+  });
+  return week ? { ...withDate, week } : withDate;
 }
 
 async function loadTonightWithDeadline(query, ms) {
@@ -525,7 +610,7 @@ export function indexNowKeyResponse() {
 export function sitemapXml(env) {
   const base = origin(env);
   const lastmod = citySitemapLastmod();
-  const urls = ["/", "/pro", "/faq", "/sunset", ...CITIES.map((city) => `/sunset/${city.slug}`), ...CITIES.map((city) => `/sunset-time/${city.slug}`)];
+  const urls = ["/", "/faq", "/sunset", ...CITIES.map((city) => `/sunset/${city.slug}`), ...CITIES.map((city) => `/sunset-time/${city.slug}`)];
   const body = urls.map((path) => {
     const loc = `${base}${path}`;
     if (path === "/sunset" || path.startsWith("/sunset/") || path.startsWith("/sunset-time/")) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;

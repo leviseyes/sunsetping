@@ -21,13 +21,6 @@ function rankingBlock(ranking) {
   return `<p style="font-size:15px;color:#1f2937;margin:18px 0 8px"><b>Best of your spots tonight</b></p><ol style="margin:0 0 8px;padding-left:20px;color:#4b5563;font-size:15px">${items}</ol>`;
 }
 
-function upsellBlock(strong) {
-  if (strong) {
-    return `<p style="font-size:16px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>A night like this is why people get Pro.</b> An 8 or higher is worth leaving the house. Pro watches up to 10 places, ranks the best one, and can warn you the day before. <a href="https://sunsetping.com/pro" style="color:#c4541a">Get Pro yearly · $29, save 39%</a></p>`;
-  }
-  return `<p style="font-size:15px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>Watch more than one horizon.</b> Pro is 10 spots, sunrise alerts, a 7-day outlook, and a day-before heads-up. <a href="https://sunsetping.com/pro" style="color:#c4541a">Yearly is $29, save 39%</a></p>`;
-}
-
 function shareBlock(href, when) {
   const label = when === "sunrise" ? "Share this sunrise forecast" : when === "tomorrow" ? "Share tomorrow's forecast" : "Share tonight's forecast";
   return `<p style="font-size:15px;margin:12px 0 0"><a href="${escapeHtml(href)}" style="color:#c4541a">${label}</a></p>`;
@@ -38,7 +31,7 @@ function shareBlock(href, when) {
  * `when` is "tonight" | "tomorrow" | "sunrise".
  * Pass unsubscribeUrl to replace the {{unsubscribe_url}} placeholder.
  */
-export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = "tonight", ranking = null, plan = "free", shareUrl = "" } = {}) {
+export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = "tonight", ranking = null, shareUrl = "" } = {}) {
   const c = r.score >= 6 ? "#f97316" : "#64748b";
   const e = {
     date: escapeHtml(r.date),
@@ -60,7 +53,7 @@ export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = 
       : "Tip: the best color usually shows up 5–15 minutes <i>after</i> the sun drops.";
   const safeUrl = escapeHtml(unsubscribeUrl);
   const share = shareUrl || `https://sunsetping.com/s/${encodeURIComponent(r.location)}`;
-  const extra = `${shareBlock(share, when)}${plan === "pro" ? "" : upsellBlock(when === "tonight" && Number(r.score) >= 8)}`;
+  const extra = shareBlock(share, when);
   return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
 <table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
@@ -87,7 +80,7 @@ export function emailSubject(r, when = "tonight") {
   return `Tonight's sunset in ${r.location}: ${r.score}/10`;
 }
 
-export const PRO_PERKS = [
+export const FREE_PERKS = [
   "Up to 10 saved spots",
   "Sunrise alerts",
   "7-day outlook",
@@ -103,9 +96,9 @@ export function welcomeSubject(location) {
 
 /**
  * First-signup note. Same cream card as the daily alert.
- * Yearly checkout is the first link. Omit the score block when tonight is missing.
+ * Omit the score block when tonight is missing.
  */
-export function renderWelcomeEmail({ location, tonight = null, yearlyUrl, monthlyUrl, unsubscribeUrl }) {
+export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl }) {
   const place = escapeHtml(location);
   const safeUrl = escapeHtml(unsubscribeUrl);
   const hasScore = tonight && tonight.score != null && tonight.score !== "";
@@ -122,7 +115,7 @@ export function renderWelcomeEmail({ location, tonight = null, yearlyUrl, monthl
   const reason = hasScore && tonight.reason
     ? `<p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">${escapeHtml(tonight.reason)}</p>`
     : "";
-  const perks = PRO_PERKS.map((line) => `<li style="margin:0 0 4px">${escapeHtml(line)}</li>`).join("");
+  const perks = FREE_PERKS.map((line) => `<li style="margin:0 0 4px">${escapeHtml(line)}</li>`).join("");
   return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
 <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
 <table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
@@ -131,13 +124,11 @@ export function renderWelcomeEmail({ location, tonight = null, yearlyUrl, monthl
 ${scoreBlock}</td></tr>
 <tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
 <p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">You're in. We'll email you before sunset in <b>${place}</b>.</p>
-<p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">The same-day note arrives about 3 hours before sunset. Free covers this one place.</p>
+<p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">Know when the light will be good before you drive out. The same-day note arrives about 3 hours before sunset.</p>
 ${tonightLine}${reason}
-<p style="font-size:16px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>Pro adds</b></p>
+<p style="font-size:16px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>Included free</b></p>
 <ul style="margin:0 0 16px;padding-left:20px;color:#4b5563;font-size:15px">${perks}</ul>
-<p style="margin:0 0 10px"><a href="${escapeHtml(yearlyUrl)}" style="display:inline-block;background:#1c1612;color:#fff;text-decoration:none;border-radius:999px;padding:12px 18px;font-weight:700">Yearly · $29 · $2.42/mo, save 39%</a></p>
-<p style="margin:0 0 8px"><a href="${escapeHtml(monthlyUrl)}" style="color:#c4541a">Monthly · $3.99</a></p>
-<p style="font-size:14px;color:#6f655d;margin:12px 0 0;line-height:1.5">Free stays free. No charge unless you choose Pro.</p>
+<p style="font-size:14px;color:#6f655d;margin:12px 0 0;line-height:1.5">SunsetPing is free. Unsubscribe any time.</p>
 </td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
 You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;
@@ -181,11 +172,6 @@ export function normalizeNewsletter(content = {}) {
   };
 }
 
-function newsletterUpsell(plan) {
-  if (plan === "pro") return "";
-  return `<p style="font-size:15px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>Want the week ahead?</b> Pro is 10 spots, sunrise alerts, and a 7-day outlook. <a href="https://sunsetping.com/pro" style="color:#c4541a">Monthly $3.99 or yearly $29</a>.</p>`;
-}
-
 function moreOutlook(rest) {
   if (!rest.length) return "";
   const items = rest
@@ -201,10 +187,9 @@ function moreOutlook(rest) {
 
 /**
  * Weekly issue, same cream card as the daily alert.
- * Free plans get a light Pro upsell. Pro plans skip it.
  * Pass unsubscribeUrl to replace the {{unsubscribe_url}} placeholder.
  */
-export function renderNewsletter(input, { unsubscribeUrl = "{{unsubscribe_url}}", plan = "free" } = {}) {
+export function renderNewsletter(input, { unsubscribeUrl = "{{unsubscribe_url}}" } = {}) {
   const content = normalizeNewsletter(input);
   const lead = content.highlights[0] || { location: "", night: "", score: null, verdict: "", blurb: "" };
   const c = lead.score != null && lead.score >= 6 ? "#f97316" : "#64748b";
@@ -236,7 +221,7 @@ export function renderNewsletter(input, { unsubscribeUrl = "{{unsubscribe_url}}"
 <div style="font-size:28px;line-height:1.2;margin:18px 0 0;font-family:Georgia,'Times New Roman',serif">This week's best sunset outlook</div>
 ${scoreBlock}${verdict}</td></tr>
 <tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
-${where}${blurb}${moreOutlook(content.highlights.slice(1))}${tip}${feature}${newsletterUpsell(plan)}
+${where}${blurb}${moreOutlook(content.highlights.slice(1))}${tip}${feature}
 </td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
 You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;

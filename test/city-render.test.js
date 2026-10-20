@@ -125,7 +125,11 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(html, /<p class="city-score"><strong>10\/10<\/strong>/);
     assert.match(html, /Sunset 6:59 PM CDT\./);
     assert.match(html, /fetch\("\/api\/score\?q="/);
+    assert.match(html, /id="signup"/);
+    assert.match(html, /Know when the light will be good before you drive out/);
     assert.match(html, /action="\/api\/subscribe"/);
+    assert.match(html, /class="signup-sticky"/);
+    assert.match(html, /class="footer-signup"/);
     assert.match(html, /name="location" value="Austin, Texas"/);
     assert.match(html, /Mount Bonnell/);
     const pairs = cityQa(html);
@@ -164,6 +168,50 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(ld.description, /Golden hour runs 5:59-6:59 PM and blue hour ends 7:39 PM/);
     assert.match(ld.description, /10\/10/);
     assert.match(ld.name, /Sunset time today in Austin/);
+    assert.match(html, /name="description" content="[^"]*Sunset times for the next 7 days are listed on this page/);
+    const week = html.match(/<section class="week-times"[\s\S]*?<\/section>/);
+    assert.ok(week, "week sunset table");
+    assert.match(week[0], /Sunset times this week in Austin/);
+    assert.match(week[0], /Local time \(CDT, America\/Chicago\)/);
+    assert.match(week[0], /Golden hour starts 60 minutes before sunset/);
+    assert.match(week[0], /href="#signup">Get free sunset and golden-hour alerts/);
+    assert.doesNotMatch(week[0], /\/pro/);
+    assert.doesNotMatch(week[0], /\/10/);
+    assert.doesNotMatch(week[0], /Don't miss it|Worth stepping outside|Probably skip/);
+    const rows = [...week[0].matchAll(/<tr><td><time datetime="([^"]+)">([^<]+)<\/time><\/td><td>([^<]+)<\/td><td>([^<]+)<\/td><\/tr>/g)];
+    assert.deepEqual(rows.map((row) => [row[1], row[2], row[3], row[4]]), [
+      ["2026-10-15", "Thu, Oct 15", "6:59 PM CDT", "5:59 PM CDT"],
+      ["2026-10-16", "Fri, Oct 16", "6:58 PM CDT", "5:58 PM CDT"],
+      ["2026-10-17", "Sat, Oct 17", "6:57 PM CDT", "5:57 PM CDT"],
+      ["2026-10-18", "Sun, Oct 18", "6:56 PM CDT", "5:56 PM CDT"],
+      ["2026-10-19", "Mon, Oct 19", "6:55 PM CDT", "5:55 PM CDT"],
+      ["2026-10-20", "Tue, Oct 20", "6:54 PM CDT", "5:54 PM CDT"],
+      ["2026-10-21", "Wed, Oct 21", "6:53 PM CDT", "5:53 PM CDT"],
+    ]);
+    const list = blocks.find((block) => block["@type"] === "ItemList");
+    assert.equal(list.name, "Sunset times this week in Austin");
+    assert.equal(list.numberOfItems, 7);
+    assert.equal(list.itemListElement.length, 7);
+    assert.equal(list.itemListElement[0].name, "Thursday, October 15");
+    assert.equal(list.itemListElement[0].description, "Sunset 6:59 PM CDT. Golden hour starts 5:59 PM CDT.");
+    assert.equal(list.itemListElement[6].position, 7);
+    assert.doesNotMatch(JSON.stringify(list), /\/10|score/i);
+
+    const timePage = await worker.fetch(new Request("https://sunsetping.com/sunset-time/austin"), testEnv(createDb()));
+    assert.equal(timePage.status, 200);
+    const timeHtml = await timePage.text();
+    assert.match(timeHtml, /<h1>What time is sunset today in Austin\?<\/h1>/);
+    assert.match(timeHtml, /rel="canonical" href="https:\/\/sunsetping.com\/sunset-time\/austin"/);
+    assert.match(timeHtml, /<title>Sunset Time Today in Austin: 6:59 PM \(10\/10\) · SunsetPing<\/title>/);
+    assert.match(timeHtml, /Sunset times this week in Austin/);
+    assert.match(timeHtml, /datetime="2026-10-21"/);
+    assert.match(timeHtml, /Sunset times for the next 7 days are listed on this page/);
+    assert.match(timeHtml, /id="signup"/);
+    assert.match(timeHtml, /action="\/api\/subscribe"/);
+    assert.match(timeHtml, /name="location" value="Austin, Texas"/);
+    assert.match(timeHtml, /Know when the light will be good before you drive out/);
+    const timeList = jsonLdBlocks(timeHtml).find((block) => block["@type"] === "ItemList");
+    assert.equal(timeList.itemListElement.length, 7);
   });
 });
 
@@ -180,6 +228,8 @@ test("a city page stays 200 with the static shell when the forecast fails or tim
     assert.match(html, /Mount Bonnell/);
     assert.match(html, /action="\/api\/subscribe"/);
     assert.doesNotMatch(html, /Tonight&#39;s SunsetPing score is/);
+    assert.doesNotMatch(html, /Sunset times this week/);
+    assert.doesNotMatch(html, /id="sunset-week"/);
     assert.doesNotMatch(html, /What time is sunset in Austin today/);
     assert.doesNotMatch(html, /When is golden hour in Austin tonight/);
     assert.doesNotMatch(html, /Will the sunset be good in Austin tonight/);

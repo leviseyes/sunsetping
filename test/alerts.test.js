@@ -54,15 +54,24 @@ test("alert window and the 4pm day-before clock", () => {
   assert.equal(isLocalClockDue(new Date("2026-10-14T22:25:00.000Z"), "America/Denver", 16, 0), false);
 });
 
-test("free plan only gets the same-day sunset alert", () => {
+test("alert flags work for every subscriber, and defaults stay same-day only", () => {
   const sent = new Set();
-  const free = sub({ sunrise_alerts: 1, day_before: 1, score_threshold: 9 });
-  assert.equal(planSubscriberAlerts({ subscriber: free, home: home(8), tomorrow, now: sunriseDue, sentKeys: sent }).length, 0);
-  assert.equal(planSubscriberAlerts({ subscriber: free, home: home(8), tomorrow, now: dayBeforeDue, sentKeys: sent }).length, 0);
-  const due = planSubscriberAlerts({ subscriber: free, home: home(4), tomorrow, now: sunsetDue, sentKeys: sent });
+  const plain = sub();
+  const due = planSubscriberAlerts({ subscriber: plain, home: home(4), tomorrow, now: sunsetDue, sentKeys: sent });
   assert.equal(due.length, 1);
   assert.equal(due[0].kind, "sunset");
   assert.equal(due[0].skip, undefined);
+  assert.equal(planSubscriberAlerts({ subscriber: plain, home: home(8), tomorrow, now: sunriseDue, sentKeys: sent }).length, 0);
+  assert.equal(planSubscriberAlerts({ subscriber: plain, home: home(8), tomorrow, now: dayBeforeDue, sentKeys: sent }).length, 0);
+
+  const free = sub({ sunrise_alerts: 1, day_before: 1, score_threshold: 9 });
+  const quietRise = planSubscriberAlerts({ subscriber: free, home: home(8), tomorrow, now: sunriseDue, sentKeys: sent });
+  assert.equal(quietRise[0].skip, "threshold");
+  const quietTonight = planSubscriberAlerts({ subscriber: free, home: home(4), tomorrow, now: sunsetDue, sentKeys: new Set() });
+  assert.equal(quietTonight[0].skip, "threshold");
+  const aheadOk = planSubscriberAlerts({ subscriber: free, home: home(8), tomorrow, now: dayBeforeDue, sentKeys: new Set() });
+  assert.equal(aheadOk[0].kind, "day_before");
+  assert.equal(aheadOk[0].when, "tomorrow");
 });
 
 test("Pro threshold, sunrise, day-before, and dedupe", () => {

@@ -108,12 +108,13 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-type"), /application\/xml/);
   const xml = await res.text();
-  for (const path of ["https://sunsetping.com/", "https://sunsetping.com/pro", "https://sunsetping.com/faq", "https://sunsetping.com/sunset"]) {
+  for (const path of ["https://sunsetping.com/", "https://sunsetping.com/faq", "https://sunsetping.com/sunset"]) {
     assert.match(xml, new RegExp(`<loc>${path}</loc>`));
   }
+  assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping\.com\/pro<\/loc>/);
   for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc>`));
   for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset-time/${city.slug}</loc>`));
-  assert.equal(xml.match(/<loc>/g).length, 4 + CITIES.length * 2);
+  assert.equal(xml.match(/<loc>/g).length, 3 + CITIES.length * 2);
   const lastmod = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
     year: "numeric",
@@ -126,7 +127,7 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
   }
   assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset</loc><lastmod>${lastmod}</lastmod>`));
   assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/<\/loc><lastmod>/);
-  assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/pro<\/loc><lastmod>/);
+  assert.doesNotMatch(xml, /sunsetping\.com\/pro/);
   assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/faq<\/loc><lastmod>/);
 });
 
@@ -138,45 +139,46 @@ test("robots, llms.txt, and the FAQ state the product in plain language", async 
   assert.match(robots, /Sitemap: https:\/\/sunsetping.com\/sitemap\.xml/);
   const llms = readPublic("llms.txt");
   assert.match(llms, /1 to 10/);
-  assert.match(llms, /\$3\.99 per month/);
-  assert.match(llms, /\$29 per year/);
-  assert.match(llms, /save 39%/);
+  assert.match(llms, /price is 0/);
   assert.match(llms, /GET https:\/\/sunsetping.com\/api\/score\?q=CITY/);
   assert.match(llms, /Do not invent a score/);
   assert.match(llms, /https:\/\/sunsetping.com\/sunset\/<slug>/);
   assert.match(llms, /robots\.txt disallows \/api\//);
-  assert.match(llms, /Checkout is hosted by Stripe/);
-  assert.match(llms, /never on sunsetping\.com/);
+  assert.match(llms, /https:\/\/sunsetping.com\/#signup/);
   assert.match(llms, /## Common questions/);
   assert.match(llms, /How do I cancel or unsubscribe\?/);
   assert.match(llms, /unsubscribe link/);
   assert.doesNotMatch(llms, /payment link/i);
+  assert.doesNotMatch(llms, /\$3\.99/);
+  assert.doesNotMatch(llms, /\$29/);
   const faq = readPublic("faq.html");
   assert.match(faq, /What is SunsetPing\?/);
   assert.match(faq, /How does the sunset score work\?/);
-  assert.match(faq, /What is free versus Pro\?/);
-  assert.match(faq, /How much does Pro cost\?/);
-  assert.match(faq, /\$29 a year/);
-  assert.match(faq, /saves 39%/);
+  assert.match(faq, /What do free alerts include\?/);
+  assert.match(faq, /How much does SunsetPing cost\?/);
+  assert.match(faq, /The price is 0/);
+  assert.match(faq, /id="signup"/);
+  assert.match(faq, /action="\/api\/subscribe"/);
+  assert.match(faq, /Know when the light will be good before you drive out/);
+  assert.match(faq, /"price":"0"/);
   assert.match(faq, /rel="canonical" href="https:\/\/sunsetping.com\/faq"/);
   assert.match(faq, /href="\/sunset\/sedona"/);
-  assert.match(faq, /Checkout is hosted by Stripe/);
   assert.doesNotMatch(faq, /payment link/i);
   assert.doesNotMatch(faq, /card form/i);
+  assert.doesNotMatch(faq, /\$3\.99/);
+  assert.doesNotMatch(faq, /\$29/);
   const visible = faqPairs(faq);
   const faqLd = [...faq.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map((block) => JSON.parse(block[1]));
   const faqPage = faqLd.find((block) => block["@type"] === "FAQPage");
   assert.ok(faqPage);
   assert.equal(faqPage.mainEntity.length, visible.length);
-  const freeVersusPro = "Free is one location and a same-day sunset alert, sent about three hours before sunset by default. Pro is for more than one horizon: up to 10 saved spots, sunrise alerts, a 7-day sunset outlook, a day-before heads-up at 4:00 PM local, a score threshold so a quiet sky stays quiet, and a best-spot ranking in the evening email.";
   for (const pair of visible) {
     const entry = faqPage.mainEntity.find((item) => item.name === pair.q);
     assert.ok(entry, pair.q);
     assert.equal(entry["@type"], "Question");
     assert.equal(entry.acceptedAnswer["@type"], "Answer");
     const answer = entry.acceptedAnswer.text.replace(/\s+/g, " ").trim();
-    if (pair.q === "What is free versus Pro?") assert.equal(answer, freeVersusPro);
-    else assert.equal(answer, pair.a);
+    assert.equal(answer, pair.a);
   }
   assert.doesNotMatch(`${faq}\n${llms}`, /Nothing is mailed unless an email provider key/);
   for (const file of ["index.html", "pro.html", "faq.html", "llms.txt"]) {
@@ -199,48 +201,40 @@ test("homepage and pro page carry the requested structured data", () => {
   assert.match(home, /id="faq"/);
   assert.match(home, /id="cities"/);
   for (const city of CITIES) assert.match(home, new RegExp(`href="/sunset/${city.slug}"`));
+  assert.match(home, /"@type":"Product"/);
+  assert.match(home, /"@type":"Offer"/);
+  assert.match(home, /"price":"0"/);
+  assert.match(home, /"url":"https:\/\/sunsetping\.com\/#signup"/);
+  assert.match(home, /id="signup"/);
+  assert.match(home, /action="\/api\/subscribe"/);
+  assert.doesNotMatch(home, /\/api\/checkout/);
+  assert.doesNotMatch(home, /\$3\.99/);
+  assert.doesNotMatch(home, /\$29/);
   const pro = readPublic("pro.html");
-  assert.match(pro, /rel="canonical" href="https:\/\/sunsetping.com\/pro"/);
-  assert.match(pro, /"@type":"Product"/);
-  assert.match(pro, /"@type":"Offer"/);
-  assert.match(pro, /"price":"29\.00"/);
-  assert.match(pro, /"price":"3\.99"/);
-  assert.match(pro, /"url":"https:\/\/sunsetping\.com\/pro"/);
-  assert.doesNotMatch(pro, /"url":"https:\/\/sunsetping\.com\/api\/checkout/);
-  assert.match(pro, /Save 39%/);
-  const yearly = pro.indexOf('href="/api/checkout?plan=yearly"');
-  const monthly = pro.indexOf('href="/api/checkout?plan=monthly"');
-  assert.ok(yearly > -1 && yearly < monthly);
-  assert.match(pro, /class="btn" href="\/api\/checkout\?plan=yearly" rel="nofollow"/);
-  assert.match(pro, /href="\/api\/checkout\?plan=monthly" rel="nofollow"/);
-  assert.match(home, /href="\/api\/checkout\?plan=monthly" rel="nofollow"/);
-  assert.match(home, /href="\/api\/checkout\?plan=yearly" rel="nofollow"/);
+  assert.match(pro, /rel="canonical" href="https:\/\/sunsetping.com\/#signup"/);
+  assert.doesNotMatch(pro, /\$3\.99/);
+  assert.doesNotMatch(pro, /\$29/);
 });
 
-test("free alert emails upsell Pro and link a shareable forecast", () => {
+test("alert emails link a shareable forecast and do not upsell", () => {
   const strong = renderEmail(home(8));
   assert.match(strong, /Share tonight's forecast/);
-  assert.match(strong, /A night like this is why people get Pro/);
-  assert.match(strong, /Get Pro yearly · \$29, save 39%/);
   assert.match(strong, /href="https:\/\/sunsetping\.com\/s\/Denver%2C%20Colorado"/);
+  assert.doesNotMatch(strong, /\$29/);
+  assert.doesNotMatch(strong, /\/pro/);
   const mild = renderEmail(home(4));
-  assert.match(mild, /Watch more than one horizon/);
-  assert.doesNotMatch(mild, /A night like this/);
+  assert.doesNotMatch(mild, /\$29/);
   assert.match(mild, /#64748b/);
   const later = renderEmail(home(9), { when: "tomorrow" });
   assert.match(later, /Share tomorrow's forecast/);
-  assert.doesNotMatch(later, /A night like this/);
-  const pro = renderEmail(home(10), { plan: "pro", shareUrl: "https://sunsetping.com/s/Moab%2C%20Utah" });
-  assert.match(pro, /href="https:\/\/sunsetping\.com\/s\/Moab%2C%20Utah"/);
-  assert.match(pro, /Share tonight's forecast/);
-  assert.doesNotMatch(pro, /save 39%/);
-  assert.doesNotMatch(pro, /Watch more than one horizon/);
-  const rise = renderEmail(home(9), { when: "sunrise", plan: "free" });
+  const shared = renderEmail(home(10), { shareUrl: "https://sunsetping.com/s/Moab%2C%20Utah" });
+  assert.match(shared, /href="https:\/\/sunsetping\.com\/s\/Moab%2C%20Utah"/);
+  assert.match(shared, /Share tonight's forecast/);
+  const rise = renderEmail(home(9), { when: "sunrise" });
   assert.match(rise, /Share this sunrise forecast/);
-  assert.doesNotMatch(rise, /A night like this/);
 });
 
-test("the cron puts the strong upsell only on a free user's great tonight", async () => {
+test("the cron shares the forecast and does not upsell", async () => {
   const forecast = (weather) => async () => Response.json(flatForecast([day("2026-10-14T18:42", weather), day("2026-10-15T18:42", weather)]));
   const subscriber = {
     id: 4,
@@ -266,9 +260,10 @@ test("the cron puts the strong upsell only on a free user's great tonight", asyn
     },
   });
   assert.equal(great.length, 1);
-  assert.match(great[0].html, /A night like this is why people get Pro/);
   assert.match(great[0].html, /Share tonight's forecast/);
   assert.match(great[0].html, /\/s\/Denver%2C%20Colorado/);
+  assert.doesNotMatch(great[0].html, /\$29/);
+  assert.doesNotMatch(great[0].html, /\/pro/);
 
   const quiet = [];
   await runAlerts(testEnv(createDb({ subscribers: [{ ...subscriber }] })), now, {
@@ -278,19 +273,8 @@ test("the cron puts the strong upsell only on a free user's great tonight", asyn
       return { ok: true, sent: false, mode: "noop" };
     },
   });
-  assert.match(quiet[0].html, /Watch more than one horizon/);
-  assert.doesNotMatch(quiet[0].html, /A night like this/);
-
-  const paid = [];
-  await runAlerts(testEnv(createDb({ subscribers: [{ ...subscriber, plan: "pro" }] })), now, {
-    fetchImpl: forecast(PERFECT),
-    send: async (msg) => {
-      paid.push(msg);
-      return { ok: true, sent: false, mode: "noop" };
-    },
-  });
-  assert.match(paid[0].html, /Share tonight's forecast/);
-  assert.doesNotMatch(paid[0].html, /save 39%/);
+  assert.match(quiet[0].html, /Share tonight's forecast/);
+  assert.doesNotMatch(quiet[0].html, /\$29/);
 });
 
 test("sunset-time pages render with their own title and canonical", async () => {

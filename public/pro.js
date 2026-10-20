@@ -27,35 +27,6 @@ async function loadRanking() {
   mount.innerHTML = data.ranking.map((spot) => `<article class="spot${spot.rank === 1 ? " best" : ""}"><span>${spot.rank === 1 ? "Best tonight" : `No. ${spot.rank}`}</span><b>${esc(spot.score)}/10</b><span>${esc(spot.location)}</span><span>${esc(spot.sunset)} · ${esc(spot.verdict)}</span></article>`).join("");
 }
 
-function knownEmail() {
-  return [...document.querySelectorAll('input[type="email"]')].map((el) => el.value.trim()).find(Boolean) || "";
-}
-
-function prefillCheckoutLinks() {
-  const email = knownEmail();
-  document.querySelectorAll('a[href*="/api/checkout"]').forEach((link) => {
-    const url = new URL(link.href, location.origin);
-    if (email) url.searchParams.set("email", email);
-    else url.searchParams.delete("email");
-    link.href = `${url.pathname}${url.search}`;
-  });
-}
-
-document.addEventListener("input", (event) => {
-  if (event.target?.type === "email") prefillCheckoutLinks();
-});
-document.querySelectorAll('a[href*="/api/checkout"]').forEach((link) => {
-  link.addEventListener("click", prefillCheckoutLinks);
-});
-
-if (new URLSearchParams(location.search).get("canceled") === "1") {
-  const note = document.createElement("p");
-  note.className = "checkout-note";
-  note.setAttribute("role", "status");
-  note.textContent = "No worries. Nothing was charged. Pro will be here when you want it.";
-  document.body.prepend(note);
-}
-
 document.getElementById("outlook-form")?.addEventListener("submit", (event) => {
   event.preventDefault();
   const q = new FormData(event.target).get("q").trim();
@@ -84,5 +55,5 @@ document.getElementById("settings")?.addEventListener("submit", (event) => {
   }));
 });
 
-loadOutlook("Sedona");
-loadRanking();
+if (document.getElementById("outlook")) loadOutlook("Sedona");
+if (document.getElementById("ranking")) loadRanking();

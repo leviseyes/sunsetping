@@ -33,7 +33,6 @@ export function shiftDate(isoDate, days) {
 }
 
 function passesThreshold(subscriber, score) {
-  if (subscriber.plan !== "pro") return true;
   if (subscriber.score_threshold == null || subscriber.score_threshold === "") return true;
   return score >= Number(subscriber.score_threshold);
 }
@@ -60,10 +59,9 @@ function dedupeScores(scores) {
 export function planSubscriberAlerts({ subscriber, home, tomorrow = null, now, sentKeys, spotScores = [] }) {
   const actions = [];
   if (!home?.sunsetIso) return actions;
-  const plan = subscriber.plan === "pro" ? "pro" : "free";
   const lead = Number(subscriber.lead_minutes) || DEFAULT_LEAD_MINUTES;
   const tz = home.timezone || subscriber.tz || null;
-  const ranking = plan === "pro" ? rankScores(dedupeScores(spotScores.length ? spotScores : [home])) : [];
+  const ranking = rankScores(dedupeScores(spotScores.length ? spotScores : [home]));
 
   const consider = ({ kind, localDate, when, score, targetMs, localDue = false }) => {
     const key = `${kind}:${localDate}`;
@@ -86,7 +84,7 @@ export function planSubscriberAlerts({ subscriber, home, tomorrow = null, now, s
     targetMs: sunsetUtc.getTime() - lead * 60000,
   });
 
-  if (plan === "pro" && Number(subscriber.day_before) && tomorrow?.sunsetIso) {
+  if (Number(subscriber.day_before) && tomorrow?.sunsetIso) {
     const tzTomorrow = tomorrow.timezone || tz;
     const targetDate = tomorrow.sunsetIso.slice(0, 10);
     const isTheDayBefore = Boolean(tzTomorrow) && localDateISO(now, tzTomorrow) === shiftDate(targetDate, -1);
@@ -100,7 +98,7 @@ export function planSubscriberAlerts({ subscriber, home, tomorrow = null, now, s
     });
   }
 
-  if (plan === "pro" && Number(subscriber.sunrise_alerts) && home.sunrise?.iso) {
+  if (Number(subscriber.sunrise_alerts) && home.sunrise?.iso) {
     const sunriseUtc = zonedWallToUtc(home.sunrise.iso, tz);
     consider({
       kind: "sunrise",
@@ -156,7 +154,7 @@ export async function runAlerts(env, now = new Date(), deps = {}) {
       const tomorrow = withTz(scoreForecastDay(forecast, 1, meta));
       if (home && !home.tz && home.timezone) home.tz = tzAbbrev(home.timezone, zonedWallToUtc(home.sunsetIso, home.timezone));
       const spotScores = [];
-      if (sub.plan === "pro" && home) {
+      if (home) {
         spotScores.push(home);
         const saved = await db.prepare("SELECT id, label, lat, lon, tz FROM saved_locations WHERE subscriber_id = ?1").bind(sub.id).all();
         for (const spot of saved.results || []) {
