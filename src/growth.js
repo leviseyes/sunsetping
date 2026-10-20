@@ -1,6 +1,5 @@
 import { CITIES, cityBySlug, nearbyCities } from "./cities.js";
 import { INDEXNOW_KEY } from "./indexnow.js";
-import { renderOgResponse } from "./og-card.js";
 import { fetchForecast, resolvePlace } from "./openmeteo.js";
 import { simplePage } from "./pages.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
@@ -9,6 +8,11 @@ const SITE = "https://sunsetping.com";
 const OG_IMAGE = `${SITE}/images/hero-sunset.jpg`;
 /** Edge cache for a rendered city forecast. 25 minutes is inside the 20–30 minute window. */
 export const CITY_PAGE_CACHE_SECONDS = 1500;
+/**
+ * Prebuilt /og/<slug>.png cards. A day is long enough for link crawlers and
+ * short enough that a regenerated card replaces it after the next deploy.
+ */
+export const OG_CARD_CACHE = "public, max-age=86400, s-maxage=86400";
 const CITY_SCORE_TIMEOUT_MS = 8000;
 const FALLBACK_CACHE = "public, max-age=60";
 
@@ -533,35 +537,27 @@ export function sitemapXml(env) {
   });
 }
 
-export async function cityOg(env, slug, ctx) {
+export async function cityOg(env, slug) {
   const city = cityBySlug(String(slug || "").toLowerCase());
   if (!city) return simplePage("No score card", "That sunset city isn't in the guide. Try the city index.", 404);
-  const cache = edgeCache();
-  const cacheKey = new Request(`https://sunsetping.com/og/${city.slug}.png`, { method: "GET" });
-  if (cache) {
-    const hit = await cache.match(cacheKey).catch(() => null);
-    if (hit) return hit;
-  }
-  let score = null;
+  // Serve the prebuilt card. satori + yoga + resvg on this request exceeds the
+  // Workers Free 10ms CPU limit (outcome exceededCpu, error 1102) on a cold isolate.
+  const assetUrl = new URL(`/og/${city.slug}.png`, SITE);
   try {
-    score = await loadTonightWithDeadline(city.query, scoreTimeoutMs(env));
-  } catch (err) {
-    console.log(JSON.stringify({ event: "og_score_fallback", slug: city.slug, message: String(err?.message || err) }));
-  }
-  const response = await renderOgResponse({
-    city: city.city,
-    score: score?.score ?? null,
-    verdict: score?.verdict || "",
-    sunset: score?.sunset || "",
-  }, { live: Boolean(score) });
-  if (score && cache) {
-    try {
-      await remember(ctx, cache.put(cacheKey, response.clone()));
-    } catch (err) {
-      console.log(JSON.stringify({ event: "og_cache_put_failed", message: String(err?.message || err) }));
+    const asset = await env.ASSETS.fetch(new Request(assetUrl, { method: "GET" }));
+    if (asset?.ok) {
+      const headers = new Headers();
+      headers.set("content-type", "image/png");
+      headers.set("cache-control", OG_CARD_CACHE);
+      const etag = asset.headers.get("etag");
+      if (etag) headers.set("etag", etag);
+      return new Response(asset.body, { status: 200, headers });
     }
+    console.log(JSON.stringify({ event: "og_asset_missing", slug: city.slug, status: asset?.status || 0 }));
+  } catch (err) {
+    console.log(JSON.stringify({ event: "og_asset_failed", slug: city.slug, message: String(err?.message || err) }));
   }
-  return response;
+  return simplePage("No score card", "That sunset score card isn't available.", 404);
 }
 
 export async function growthRoute(url, env, ctx, options = {}) {

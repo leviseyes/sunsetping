@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test --test-concurrency=1",
+    "build:og": "node scripts/build-og-cards.mjs",
     "dev": "wrangler dev --local --port 8787"
   },
   "devDependencies": {
