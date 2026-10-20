@@ -1,4 +1,5 @@
 import { FREE_PERKS } from "./email.js";
+import { signupBlock } from "./signup.js";
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -12,7 +13,7 @@ const SHELL_HEAD = `<meta charset="utf-8"><meta name="viewport" content="width=d
 
 function topbar() {
   return `<header class="topbar"><a class="logo" href="/">SunsetPing</a>
-<nav><a href="/#check">Tonight</a><a href="/sunset">Cities</a><a href="/#signup">Free alerts</a></nav></header>`;
+<nav><a href="/#check">Tonight</a><a href="/sunset">Cities</a><a href="/photo-of-the-month">Photo</a><a href="/#signup">Free alerts</a></nav></header>`;
 }
 
 export function simplePage(title, message, status = 200) {
@@ -61,7 +62,7 @@ ${sharePath ? `<p class="share-row"><a class="share-url" href="${esc(sharePath)}
 </article>`;
 }
 
-export function sharePage({ score, canonical, image }) {
+export function sharePage({ score, canonical, image, showMosh = false }) {
   const title = `Tonight's sunset in ${score.location}: ${score.score}/10 — ${score.verdict}`;
   const description = `${score.reason} Sunset at ${score.sunset}${score.tz ? " " + score.tz : ""}.`;
   const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}
@@ -89,17 +90,9 @@ ${topbar()}
 <div class="result-slot">${scoreCardHtml(score, { sharePath: canonical })}</div>
 <p class="hero-links"><a class="btn" href="/#check">Check another place</a> <a class="btn ghost" href="/#signup">Get free alerts</a></p>
 <section class="panel" id="signup" data-welcome-host>
-<h2>Know when the light will be good before you drive out.</h2>
-<p>Free sunset and golden-hour quality alerts for landscape photographers.</p>
-<form class="stack" action="/api/subscribe" method="post">
-<label class="sr-only" for="share-email">Email</label>
-<input id="share-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-<label class="sr-only" for="share-location">City or ZIP</label>
-<input id="share-location" type="text" name="location" value="${esc(score.location)}" required maxlength="100" aria-label="City or ZIP">
-<button class="btn" type="submit">Get free alerts</button>
-</form>
+${signupBlock({ idPrefix: "share", location: score.location, showMosh, button: "Get free alerts" })}
 </section>
-</main></body></html>`;
+</main><script src="/app.js" defer></script></body></html>`;
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=600" },
   });
@@ -138,12 +131,19 @@ function tonightLine(tonight) {
   return `<p class="welcome-tonight"><span class="welcome-score">${esc(tonight.score)}<span>/10</span></span><span class="welcome-sky">${esc(tonight.verdict || "")} · sunset <b>${esc(tonight.sunset || "")}</b>${tz}</span></p>`;
 }
 
-export function welcomeOfferHtml({ location, tonight = null } = {}) {
+export function welcomeOfferHtml({ location, tonight = null, downloads = [] } = {}) {
   const perks = FREE_PERKS.map((line) => `<li>${esc(line)}</li>`).join("");
+  const placeName = String(location || "").trim();
+  const headline = placeName
+    ? `You're in. We'll email you before sunset in ${esc(placeName)}.`
+    : "You're in. Add a city whenever you like and we'll email you before sunset.";
+  const files = (downloads || []).map((item) => `<a href="${esc(item.href)}">${esc(item.label)}</a>`).join("<br>");
+  const fileBlock = files ? `<p class="welcome-downloads">${files}</p>` : "";
   return `<div class="welcome-offer" role="status">
 <p class="kicker">Free alerts</p>
-<h2>You're in. We'll email you before sunset in ${esc(location)}.</h2>
+<h2>${headline}</h2>
 <p class="lede">Know when the light will be good before you drive out. The same-day note arrives about 3 hours before sunset.</p>
+${fileBlock}
 ${tonightLine(tonight)}
 <article class="welcome-included">
 <p class="eyebrow">Included free</p>
@@ -154,11 +154,11 @@ ${tonightLine(tonight)}
 </div>`;
 }
 
-export function welcomePage({ location, tonight = null } = {}) {
+export function welcomePage({ location, tonight = null, downloads = [] } = {}) {
   const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>You're in · SunsetPing</title>
 <meta name="robots" content="noindex"></head>
 <body class="welcome">${topbar()}
-<main class="welcome-main">${welcomeOfferHtml({ location, tonight })}</main>
+<main class="welcome-main">${welcomeOfferHtml({ location, tonight, downloads })}</main>
 </body></html>`;
   return new Response(html, {
     status: 200,

@@ -114,7 +114,8 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
   assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping\.com\/pro<\/loc>/);
   for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc>`));
   for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset-time/${city.slug}</loc>`));
-  assert.equal(xml.match(/<loc>/g).length, 3 + CITIES.length * 2);
+  assert.match(xml, /<loc>https:\/\/sunsetping\.com\/photo-of-the-month<\/loc>/);
+  assert.equal(xml.match(/<loc>/g).length, 4 + CITIES.length * 2);
   const lastmod = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
     year: "numeric",

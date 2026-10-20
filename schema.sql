@@ -1,4 +1,4 @@
--- Full schema snapshot after migrations/0004_checkout_attempts.sql.
+-- Full schema snapshot after migrations/0005_early_access.sql.
 -- Existing databases should apply the files in migrations/ (wrangler d1 migrations apply).
 -- This file is the greenfield equivalent, not a second migration.
 
@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS subscribers (
   sunrise_alerts INTEGER NOT NULL DEFAULT 0,
   day_before INTEGER NOT NULL DEFAULT 0,
   lead_minutes INTEGER NOT NULL DEFAULT 180,
+  early_access INTEGER NOT NULL DEFAULT 1,
   stripe_customer_id TEXT,
   stripe_subscription_id TEXT
 );

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Photo of the month — SunsetPing</title>
+<meta name="description" content="Reply to any SunsetPing email with your best sunset shot. The monthly winner is featured on the site, in the newsletter, and @MosheLevis on X.">
+<link rel="canonical" href="https://sunsetping.com/photo-of-the-month">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SunsetPing">
+<meta property="og:title" content="Photo of the month — SunsetPing">
+<meta property="og:description" content="Subscribers reply to any SunsetPing email with their best sunset shot. The monthly winner is featured on the site, in the newsletter, and @MosheLevis on X.">
+<meta property="og:url" content="https://sunsetping.com/photo-of-the-month">
+<meta property="og:image" content="https://sunsetping.com/images/hero-sunset.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Photo of the month — SunsetPing">
+<meta name="twitter:description" content="Reply to any SunsetPing email with your best sunset shot.">
+<meta name="twitter:image" content="https://sunsetping.com/images/hero-sunset.jpg">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <a class="logo" href="/">SunsetPing</a>
+  <nav>
+    <a href="/sunset">Cities</a>
+    <a href="/#check">Tonight</a>
+    <a href="/photo-of-the-month" aria-current="page">Photo</a>
+    <a href="/#signup">Free alerts</a>
+  </nav>
+</header>
+<main class="wrap doc">
+  <p class="kicker">Monthly</p>
+  <h1>Photo of the month.</h1>
+  <p class="lede">Subscribers reply to any SunsetPing email with their best sunset shot. One winner each month is featured on this page, in the newsletter, and <a href="https://x.com/MosheLevis">@MosheLevis</a> on X.</p>
+  <h2>How it works</h2>
+  <ul class="perk-list">
+    <li>Sign up for the free alert. Tonight's score on the city pages stays public.</li>
+    <li>Reply to any SunsetPing email with the frame you want considered.</li>
+    <li>The monthly winner is featured on the site, in the newsletter, and @MosheLevis on X.</li>
+  </ul>
+  <p>Send the photograph you would show another landscape photographer. A wide view, a clean horizon, and the light SunsetPing told you to go see.</p>
+  <div class="panel photo-signup" data-welcome-host>
+    <h2>Know when the light will be good before you drive out</h2>
+    <ul class="perk-list">
+      <li>7-day sunset quality outlook, free by email</li>
+      <li>8+ only alerts. Never waste a drive.</li>
+      <li>Golden hour and blue hour times in every alert</li>
+      <li>Sunset shooting cheat sheet</li>
+      <li>Photo of the month: reply with your best sunset shot</li>
+      <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
+    </ul>
+    <form class="stack signup" action="/api/subscribe" method="post" data-signup>
+      <label class="sr-only" for="photo-email">Email</label>
+      <input id="photo-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
+      <label class="sr-only" for="photo-location">City or ZIP, optional</label>
+      <input id="photo-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
+      <input type="hidden" name="tz">
+      <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
+      <button class="btn" type="submit">Get free alerts</button>
+    </form>
+  </div>
+</main>
+<footer>© 2026 SunsetPing · <a href="/sunset">Sunset cities</a> · <a href="/">Home</a> · <a href="/faq">FAQ</a> · <a href="/#signup">Get free alerts</a></footer>
+<script src="/app.js" defer></script>
+</body>
+</html>

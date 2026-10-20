@@ -4,6 +4,7 @@ import { fetchForecast, resolvePlace } from "./openmeteo.js";
 import { simplePage } from "./pages.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { weekSunsetTimes } from "./sun.js";
+import { OUTLOOK_CTA, greatNightsField, moshPdfUrl, perkListHtml } from "./signup.js";
 
 const SITE = "https://sunsetping.com";
 const OG_IMAGE = `${SITE}/images/hero-sunset.jpg`;
@@ -65,12 +66,12 @@ const SIGNUP_HEADLINE = "Know when the light will be good before you drive out."
 
 function topbar() {
   return `<header class="topbar"><a class="logo" href="/">SunsetPing</a>
-<nav><a href="/sunset">Cities</a><a href="/#check">Tonight</a><a href="/#signup">Free alerts</a></nav></header>`;
+<nav><a href="/sunset">Cities</a><a href="/#check">Tonight</a><a href="/photo-of-the-month">Photo</a><a href="/#signup">Free alerts</a></nav></header>`;
 }
 
 function locationField(location, id) {
   if (location) return `<input type="hidden" name="location" value="${esc(location)}">`;
-  return `<label class="sr-only" for="${id}-location">City or ZIP</label><input id="${id}-location" type="text" name="location" placeholder="City or park" required maxlength="100" aria-label="City or ZIP" autocomplete="address-level2">`;
+  return `<label class="sr-only" for="${id}-location">City or ZIP, optional</label><input id="${id}-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional" autocomplete="address-level2">`;
 }
 
 function signupFields({ id, location = "", button = "Get free alerts" }) {
@@ -78,38 +79,39 @@ function signupFields({ id, location = "", button = "Get free alerts" }) {
 <input id="${id}-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
 ${locationField(location, id)}
 <input type="hidden" name="tz">
+${greatNightsField()}
 <button class="btn" type="submit">${esc(button)}</button>`;
 }
 
-function inlineSignup(location = "") {
+function inlineSignup(location = "", showMosh = false) {
   const place = location ? String(location).split(",")[0] : "";
-  const lede = place
-    ? `Free sunset and golden-hour quality alerts for landscape photographers. We'll email you before the light is worth the drive to ${place}.`
-    : "Free sunset and golden-hour quality alerts for landscape photographers. One email, before you pack the car.";
   return `<section class="panel signup-block" id="signup" data-welcome-host>
 <h2>${esc(SIGNUP_HEADLINE)}</h2>
-<p>${esc(lede)}</p>
+<p class="lede">${esc(OUTLOOK_CTA)}</p>
+${perkListHtml(showMosh)}
 <form class="stack" action="/api/subscribe" method="post" data-signup>
 ${signupFields({ id: "city-signup", location, button: place ? `Alert me in ${place}` : "Get free alerts" })}
 </form>
 </section>`;
 }
 
-function stickySignup(location = "") {
+function stickySignup(location = "", showMosh = false) {
   return `<aside class="signup-sticky" data-welcome-host>
-<form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup>
 <p class="signup-sticky-copy">${esc(SIGNUP_HEADLINE)}</p>
+${perkListHtml(showMosh)}
+<form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup>
 ${signupFields({ id: "sticky", location })}
 </form>
 </aside>`;
 }
 
-function footer(location = "") {
+function footer(location = "", showMosh = false) {
   return `<footer class="site-footer"><form class="footer-signup" action="/api/subscribe" method="post" data-signup>
 <p>Free sunset alerts</p>
+${perkListHtml(showMosh)}
 ${signupFields({ id: "footer", location, button: "Email me" })}
 </form>
-<p class="footer-links">© 2026 SunsetPing · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/#signup">Get free alerts</a></p></footer>`;
+<p class="footer-links">© 2026 SunsetPing · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/photo-of-the-month">Photo of the month</a> · <a href="/#signup">Get free alerts</a></p></footer>`;
 }
 
 function htmlResponse(html, status = 200, cacheControl = "public, max-age=3600") {
@@ -266,8 +268,8 @@ ${topbar()}
 <h1>Will tonight's sunset be good where you're going?</h1>
 <p class="lede">Each page has tonight's score, the sunset time, a few places people stand, and a free alert prefilled with that city.</p>
 <nav class="city-list" aria-label="Sunset cities">${cards}</nav>
-${inlineSignup()}
-</main>${footer()}${stickySignup()}<script src="/app.js" defer></script></body></html>`;
+${inlineSignup("", Boolean(moshPdfUrl(env)))}
+</main>${footer("", Boolean(moshPdfUrl(env)))}${stickySignup("", Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script></body></html>`;
   return htmlResponse(html);
 }
 
@@ -371,7 +373,7 @@ function weekTimesHtml(city, week) {
 <thead><tr><th scope="col">Date</th><th scope="col">Sunset</th><th scope="col">Golden hour starts</th></tr></thead>
 <tbody>${rows}</tbody>
 </table></div>
-<p class="week-cta">Want a note when one of these evenings will actually be good? <a href="#signup">Get free sunset and golden-hour alerts</a>.</p>
+<p class="week-cta">${esc(OUTLOOK_CTA)}. <a href="#signup">Get free sunset and golden-hour alerts</a>.</p>
 </section>`;
 }
 
@@ -460,11 +462,11 @@ ${quickAnswersHtml(city, qa)}
 </p>
 </div>
 </section>
-${inlineSignup(city.query)}
+${inlineSignup(city.query, Boolean(moshPdfUrl(env)))}
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/sunset">All cities</a></nav>
 <p>${isTime ? `<a href="/sunset/${esc(city.slug)}">Will tonight's sunset be good in ${esc(city.city)}?</a>` : `<a href="/sunset-time/${esc(city.slug)}">Sunset time today in ${esc(city.city)}</a>`}</p>
-</main>${footer(city.query)}${stickySignup(city.query)}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
+</main>${footer(city.query, Boolean(moshPdfUrl(env)))}${stickySignup(city.query, Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
 }
 
 function cityResponse(html, score) {
@@ -610,7 +612,7 @@ export function indexNowKeyResponse() {
 export function sitemapXml(env) {
   const base = origin(env);
   const lastmod = citySitemapLastmod();
-  const urls = ["/", "/faq", "/sunset", ...CITIES.map((city) => `/sunset/${city.slug}`), ...CITIES.map((city) => `/sunset-time/${city.slug}`)];
+  const urls = ["/", "/faq", "/photo-of-the-month", "/sunset", ...CITIES.map((city) => `/sunset/${city.slug}`), ...CITIES.map((city) => `/sunset-time/${city.slug}`)];
   const body = urls.map((path) => {
     const loc = `${base}${path}`;
     if (path === "/sunset" || path.startsWith("/sunset/") || path.startsWith("/sunset-time/")) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;

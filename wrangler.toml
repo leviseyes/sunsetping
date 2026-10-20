@@ -13,6 +13,10 @@ account_id = "1a01a80affd778e3dc5812bbdcd5dc84"
 #                                     GET /api/checkout no longer creates a session. It redirects to /#signup.
 #                                     Leave old Stripe secrets in place if a webhook is still configured.
 #   PUBLIC_BASE_URL                 — optional, defaults to https://sunsetping.com
+#   MOSH_PDF_URL                    — signup bonus PDF. Empty hides the bonus line.
+
+[vars]
+MOSH_PDF_URL = ""
 
 [assets]
 directory = "./public"
