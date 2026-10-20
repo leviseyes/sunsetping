@@ -50,12 +50,16 @@ export function scoreCardNode(card) {
 /**
  * Static brand card for /og/<slug>.png. Same frame as the live score card.
  * The live number is left off so a prebuilt image never shows a stale score.
+ * The score belongs in og:title, which the city page renders from tonight's forecast.
  */
 export function cityBrandCardNode(city) {
   return flex(CARD_FRAME, [
-    flex({ fontSize: "32px", fontWeight: 600, letterSpacing: "0.22em" }, "SUNSETPING"),
     flex({ flexDirection: "column" }, [
-      flex({ fontSize: "108px", fontWeight: 600, lineHeight: 1.05 }, String(city || "Tonight")),
+      flex({ fontSize: "32px", fontWeight: 600, letterSpacing: "0.22em" }, "SUNSETPING"),
+      flex({ fontSize: "28px", marginTop: "14px", color: "#fff7ed" }, "sunsetping.com"),
+    ]),
+    flex({ flexDirection: "column" }, [
+      flex({ fontSize: "96px", fontWeight: 600, lineHeight: 1.05 }, String(city || "Tonight")),
       flex({ fontSize: "36px", marginTop: "28px", color: "#fff7ed" }, "Tonight's sunset score"),
     ]),
   ]);

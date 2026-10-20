@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { CITIES } from "../src/cities.js";
-import { OG_CARD_CACHE } from "../src/growth.js";
-import { cardModel, cityBrandCardNode, renderScorePng, scoreCardSvg } from "../src/og-card.js";
+import { OG_CARD_CACHE, OG_CARD_VERSION } from "../src/growth.js";
+import { recompressPng } from "../scripts/build-og-cards.mjs";
+import { cardModel, cityBrandCardNode, renderCityBrandPng, renderScorePng, scoreCardSvg } from "../src/og-card.js";
 import worker from "../src/worker.js";
 import { createDb, testEnv, withFetch } from "./fixtures.js";
 
@@ -38,6 +39,7 @@ test("the prebuilt brand card keeps the sunset frame and names the city", () => 
   const node = cityBrandCardNode("Sedona");
   const json = JSON.stringify(node);
   assert.match(json, /SUNSETPING/);
+  assert.match(json, /sunsetping\.com/);
   assert.match(json, /Sedona/);
   assert.match(json, /Tonight's sunset score/);
   assert.match(json, /#1c1612/);
@@ -70,22 +72,22 @@ test("city pages and the homepage point at the score card", async () => {
   const home = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
   const root = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   for (const html of [home, root]) {
-    assert.match(html, /property="og:image" content="https:\/\/sunsetping.com\/og\/sedona.png"/);
+    assert.match(html, new RegExp(`property="og:image" content="https://sunsetping.com/og/sedona.png\\?v=${OG_CARD_VERSION}"`));
     assert.match(html, /name="twitter:card" content="summary_large_image"/);
-    assert.match(html, /name="twitter:image" content="https:\/\/sunsetping.com\/og\/sedona.png"/);
+    assert.match(html, new RegExp(`name="twitter:image" content="https://sunsetping.com/og/sedona.png\\?v=${OG_CARD_VERSION}"`));
   }
   await withFetch(async () => {
     throw new Error("offline");
   }, async () => {
     const page = await worker.fetch(new Request("https://sunsetping.com/sunset/sedona"), testEnv(createDb()));
     const html = await page.text();
-    assert.match(html, /property="og:image" content="https:\/\/sunsetping.com\/og\/sedona.png"/);
+    assert.match(html, new RegExp(`property="og:image" content="https://sunsetping.com/og/sedona.png\\?v=${OG_CARD_VERSION}"`));
     assert.match(html, /property="og:image:type" content="image\/png"/);
     const timePage = await worker.fetch(new Request("https://sunsetping.com/sunset-time/sedona"), testEnv(createDb()));
     const timeHtml = await timePage.text();
-    assert.match(timeHtml, /property="og:image" content="https:\/\/sunsetping.com\/og\/sedona.png"/);
+    assert.match(timeHtml, new RegExp(`property="og:image" content="https://sunsetping.com/og/sedona.png\\?v=${OG_CARD_VERSION}"`));
     assert.match(html, /name="twitter:card" content="summary_large_image"/);
-    assert.match(html, /name="twitter:image" content="https:\/\/sunsetping.com\/og\/sedona.png"/);
+    assert.match(html, new RegExp(`name="twitter:image" content="https://sunsetping.com/og/sedona.png\\?v=${OG_CARD_VERSION}"`));
     assert.match(html, /id="share-score">Share tonight's score/);
     assert.match(html, /data-copy-link>Copy link/);
     assert.match(html, /twitter\.com\/intent\/tweet/);
@@ -118,6 +120,27 @@ function diskAssets() {
     },
   };
 }
+
+const ogModules = {
+  yogaWasm: readFileSync(new URL("../node_modules/yoga-wasm-web/dist/yoga.wasm", import.meta.url)),
+  resvgWasm: readFileSync(new URL("../node_modules/@resvg/resvg-wasm/index_bg.wasm", import.meta.url)),
+  regular: readFileSync(new URL("../src/fonts/InstrumentSans-Regular.ttf", import.meta.url)),
+  semibold: readFileSync(new URL("../src/fonts/InstrumentSans-Semibold.ttf", import.meta.url)),
+};
+
+test("prebuilt OG cards match the score-free brand render", async () => {
+  for (const city of CITIES) {
+    const png = recompressPng(await renderCityBrandPng(city.city, ogModules));
+    const file = readFileSync(new URL(`../public/og/${city.slug}.png`, import.meta.url));
+    assert.equal(Buffer.compare(Buffer.from(png), file), 0, `${city.slug}.png is not the score-free brand card`);
+  }
+  const saltLake = JSON.stringify(cityBrandCardNode("Salt Lake City"));
+  assert.match(saltLake, /Salt Lake City/);
+  assert.match(saltLake, /Tonight's sunset score/);
+  assert.match(saltLake, /SUNSETPING/);
+  assert.match(saltLake, /sunsetping\.com/);
+  assert.doesNotMatch(saltLake, /\/10/);
+});
 
 test("/og/<city>.png is a prebuilt 1200x630 PNG and an unknown city is a 404", async () => {
   const growth = readFileSync(new URL("../src/growth.js", import.meta.url), "utf8");

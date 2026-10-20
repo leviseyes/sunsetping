@@ -10,7 +10,7 @@
 import { deflateSync, inflateSync, crc32 } from "node:zlib";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { CITIES } from "../src/cities.js";
 import { renderCityBrandPng } from "../src/og-card.js";
 
@@ -63,17 +63,22 @@ function pngSize(png) {
   return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
 }
 
-mkdirSync(outDir, { recursive: true });
-let total = 0;
-for (const city of CITIES) {
-  const png = recompressPng(await renderCityBrandPng(city.city, modules));
-  const size = pngSize(png);
-  if (size.width !== 1200 || size.height !== 630) {
-    throw new Error(`${city.slug} is ${size.width}x${size.height}`);
+export async function buildOgCards() {
+  mkdirSync(outDir, { recursive: true });
+  let total = 0;
+  for (const city of CITIES) {
+    const png = recompressPng(await renderCityBrandPng(city.city, modules));
+    const size = pngSize(png);
+    if (size.width !== 1200 || size.height !== 630) {
+      throw new Error(`${city.slug} is ${size.width}x${size.height}`);
+    }
+    const file = join(outDir, `${city.slug}.png`);
+    writeFileSync(file, png);
+    total += png.length;
+    console.log(`${city.slug}.png ${png.length}`);
   }
-  const file = join(outDir, `${city.slug}.png`);
-  writeFileSync(file, png);
-  total += png.length;
-  console.log(`${city.slug}.png ${png.length}`);
+  console.log(`wrote ${CITIES.length} cards, ${total} bytes`);
 }
-console.log(`wrote ${CITIES.length} cards, ${total} bytes`);
+
+const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedDirectly) await buildOgCards();
