@@ -2,10 +2,9 @@ import { rankScores, scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
 import { MAX_SPOTS, runAlerts } from "./alerts.js";
 import { authorizeCron, issueError, prepareIssue, runWeeklyNewsletter } from "./newsletter.js";
-import { isRealCheckoutNavigation, logCheckoutAttempt } from "./checkout-nav.js";
-import { checkoutInterstitial, checkoutPlaceholder, ogSvg, proCheckoutPaths, sharePage, simplePage, welcomeOfferHtml, welcomePage } from "./pages.js";
+import { ogSvg, sharePage, simplePage, welcomeOfferHtml, welcomePage } from "./pages.js";
 import { deliverWelcome, loadTonight } from "./welcome.js";
-import { appendPrefilledEmail, checkoutCancelUrl, createCheckoutSession, stripeWebhook } from "./stripe.js";
+import { stripeWebhook } from "./stripe.js";
 import { growthRoute } from "./growth.js";
 
 const json = (o, status = 200, extra = {}) =>
@@ -79,14 +78,13 @@ async function subscribe(req, env, ctx) {
     "SELECT id, email, location, unsubscribe_token FROM subscribers WHERE email = ?1"
   ).bind(email).first();
   const tonight = await loadTonight(place);
-  const checkout = proCheckoutPaths(email);
   const offer = { location: place.name, email, tonight };
   if (isNew && row?.id) {
     const task = deliverWelcome({ env, subscriber: { ...row, location: place.name }, tonight });
     if (typeof ctx?.waitUntil === "function") ctx.waitUntil(task);
     else await task;
   }
-  if (asJson) return json({ ok: true, location: place.name, tonight, checkout, offerHtml: welcomeOfferHtml(offer) });
+  if (asJson) return json({ ok: true, location: place.name, tonight, offerHtml: welcomeOfferHtml(offer) });
   return welcomePage(offer);
 }
 
@@ -103,14 +101,8 @@ async function findSubscriber(env, email) {
   const row = await env.DB.prepare(
     "SELECT id, email, location, lat, lon, tz, plan, score_threshold, sunrise_alerts, day_before, lead_minutes, status FROM subscribers WHERE email = ?1"
   ).bind(normalized).first();
-  if (!row || row.status !== "active") throw new HttpError(404, "Subscribe first, then save spots on Pro.");
+  if (!row || row.status !== "active") throw new HttpError(404, "Subscribe first, then you can save spots and alert settings.");
   return row;
-}
-
-function requirePro(row) {
-  if (row.plan !== "pro") {
-    throw new HttpError(403, "That's a Pro feature. Free includes one location and a same-day alert.");
-  }
 }
 
 function accountPayload(row, spots) {
@@ -134,48 +126,6 @@ async function listSpots(env, subscriberId) {
   return rows.results || [];
 }
 
-// Preview fetchers must not open a Checkout Session. curl health checks and browsers still do.
-// ips-agent is the Verisign crawler ("Mozilla/5.0 (compatible; ips-agent)"). It has no
-// bot/crawler/spider token, and because it is not a browser it used to skip the interstitial.
-const CHECKOUT_CRAWLER_UA =
-  /googlebot|bingbot|crawler|spider|facebookexternalhit|slackbot|twitterbot|discordbot|whatsapp|preview|headless|ips-agent|(?:^|[^a-z])(?!cubot\b)[a-z]*bot\b/i;
-const COMPATIBLE_CRAWLER = /\(compatible\s*;/i;
-const BROWSER_ENGINE = /applewebkit|chrome\/|crios\/|fxios\/|edgios\/|firefox\/|safari\/|edg\/|msie|trident/i;
-
-function isCheckoutPrefetch(req) {
-  const purpose = `${req.headers.get("sec-purpose") || ""} ${req.headers.get("purpose") || ""}`;
-  return /prefetch/i.test(purpose);
-}
-
-function isCompatibleCrawler(ua) {
-  return COMPATIBLE_CRAWLER.test(ua) && !BROWSER_ENGINE.test(ua);
-}
-
-function isCheckoutCrawler(req) {
-  const ua = String(req.headers.get("user-agent") || "").trim();
-  if (!ua || /^curl\//i.test(ua)) return false;
-  // WhatsApp/2.x is the link preview. The in-app browser also contains WhatsApp, plus a real engine.
-  if (/whatsapp/i.test(ua) && /applewebkit|chrome|firefox/i.test(ua)) {
-    const withoutClient = ua.replace(/whatsapp/gi, "");
-    if (!CHECKOUT_CRAWLER_UA.test(withoutClient) && !isCompatibleCrawler(withoutClient)) return false;
-  }
-  return CHECKOUT_CRAWLER_UA.test(ua) || isCompatibleCrawler(ua);
-}
-
-function stripeUrl(env, plan, email) {
-  const specific = plan === "yearly" ? env.STRIPE_PAYMENT_LINK_YEARLY : env.STRIPE_PAYMENT_LINK_MONTHLY;
-  const raw = specific || env.STRIPE_PAYMENT_LINK || "";
-  const envName = plan === "yearly" ? "STRIPE_PAYMENT_LINK_YEARLY" : "STRIPE_PAYMENT_LINK_MONTHLY";
-  if (!raw) return { url: null, envName };
-  try {
-    const u = new URL(raw);
-    if (u.protocol !== "https:") return { url: null, envName, invalid: true };
-    return { url: appendPrefilledEmail(u.toString(), email), envName };
-  } catch {
-    return { url: null, envName, invalid: true };
-  }
-}
-
 async function rankInputs(spots) {
   if (!Array.isArray(spots) || spots.length < 1 || spots.length > MAX_SPOTS) {
     throw new HttpError(400, "Rank between 1 and 10 spots.");
@@ -193,7 +143,7 @@ async function rankInputs(spots) {
   }
   if (!scored.length) throw new HttpError(404, "None of those spots could be scored.");
   const ranking = rankScores(scored);
-  return { best: ranking[0], ranking, errors, feature: "best-spot-tonight", plan: "pro" };
+  return { best: ranking[0], ranking, errors, feature: "best-spot-tonight" };
 }
 
 async function handleApi(req, url, env, ctx) {
@@ -210,7 +160,6 @@ async function handleApi(req, url, env, ctx) {
     const result = await scoreQuery(inputFromUrl(url), 7);
     return json({
       feature: "7-day outlook",
-      plan: "pro",
       location: result.place.name,
       lat: result.place.latitude,
       lon: result.place.longitude,
@@ -228,7 +177,6 @@ async function handleApi(req, url, env, ctx) {
     const email = url.searchParams.get("email");
     if (email) {
       const row = await findSubscriber(env, email);
-      requirePro(row);
       const saved = await listSpots(env, row.id);
       const spots = [{ lat: row.lat, lon: row.lon, name: row.location }, ...saved.map((s) => ({ lat: s.lat, lon: s.lon, name: s.label }))].slice(0, MAX_SPOTS);
       return json(await rankInputs(spots));
@@ -271,9 +219,8 @@ async function handleApi(req, url, env, ctx) {
     if (req.method === "POST") {
       const body = await readBody(req);
       const row = await findSubscriber(env, body.email);
-      requirePro(row);
       const existing = await listSpots(env, row.id);
-      if (existing.length >= MAX_SPOTS) throw new HttpError(409, "Pro includes up to 10 saved spots.");
+      if (existing.length >= MAX_SPOTS) throw new HttpError(409, "You can save up to 10 spots.");
       const place = await resolvePlace(body.lat != null && body.lon != null && body.lat !== "" ? { lat: body.lat, lon: body.lon, name: body.label || body.location } : { q: body.location || body.q });
       await env.DB.prepare("INSERT INTO saved_locations (subscriber_id, label, lat, lon, tz) VALUES (?1, ?2, ?3, ?4, ?5)")
         .bind(row.id, place.name, place.latitude, place.longitude, place.timezone).run();
@@ -283,7 +230,6 @@ async function handleApi(req, url, env, ctx) {
     if (req.method === "DELETE") {
       const body = await readBody(req);
       const row = await findSubscriber(env, body.email);
-      requirePro(row);
       const id = Number(body.id);
       if (!Number.isInteger(id)) throw new HttpError(400, "Missing spot id.");
       const result = await env.DB.prepare("DELETE FROM saved_locations WHERE id = ?1 AND subscriber_id = ?2").bind(id, row.id).run();
@@ -297,7 +243,6 @@ async function handleApi(req, url, env, ctx) {
     if (req.method !== "POST") return json({ error: "POST only" }, 405);
     const body = await readBody(req);
     const row = await findSubscriber(env, body.email);
-    requirePro(row);
     let threshold = row.score_threshold;
     let sunrise = Number(row.sunrise_alerts) ? 1 : 0;
     let dayBefore = Number(row.day_before) ? 1 : 0;
@@ -326,41 +271,8 @@ async function handleApi(req, url, env, ctx) {
   }
 
   if (url.pathname === "/api/checkout") {
-    if (req.method !== "GET") return json({ error: "GET only" }, 405);
-    const plan = url.searchParams.get("plan") === "yearly" ? "yearly" : "monthly";
-    const email = url.searchParams.get("email") || "";
-    const confirm = url.searchParams.get("confirm") === "1";
-    if (isCheckoutPrefetch(req) || isCheckoutCrawler(req)) {
-      logCheckoutAttempt(ctx, env, req, { plan, outcome: "crawler_redirect", confirm });
-      return Response.redirect(new URL("/pro", url), 302);
-    }
-    if (!confirm && !isRealCheckoutNavigation(req)) {
-      logCheckoutAttempt(ctx, env, req, { plan, outcome: "interstitial", confirm });
-      return checkoutInterstitial({ plan, email });
-    }
-    if (env.STRIPE_SECRET_KEY) {
-      try {
-        const sessionUrl = await createCheckoutSession({
-          env,
-          plan,
-          email,
-          cancelUrl: checkoutCancelUrl(req.headers.get("referer")),
-        });
-        if (sessionUrl) {
-          logCheckoutAttempt(ctx, env, req, { plan, outcome: "session", confirm, sessionUrl });
-          return Response.redirect(sessionUrl, 303);
-        }
-      } catch (err) {
-        console.log(JSON.stringify({ event: "stripe_checkout_session_error", message: String(err?.message || err) }));
-      }
-    }
-    const link = stripeUrl(env, plan, email);
-    if (!link.url) {
-      logCheckoutAttempt(ctx, env, req, { plan, outcome: "placeholder", confirm });
-      return checkoutPlaceholder({ plan, envName: link.envName });
-    }
-    logCheckoutAttempt(ctx, env, req, { plan, outcome: "fallback_link", confirm });
-    return Response.redirect(link.url, 302);
+    if (req.method !== "GET" && req.method !== "HEAD") return json({ error: "GET only" }, 405);
+    return Response.redirect(new URL("/#signup", url), 302);
   }
 
   if (url.pathname === "/api/og.svg") {
@@ -385,10 +297,8 @@ export default {
         if (q.length < 2) return Response.redirect(new URL("/", url), 302);
         return Response.redirect(new URL(`/s/${encodeURIComponent(q)}`, url), 302);
       }
-      if (url.pathname === "/pro" || url.pathname === "/pro/") {
-        const assetUrl = new URL(req.url);
-        assetUrl.pathname = "/pro.html";
-        return env.ASSETS.fetch(new Request(assetUrl, req));
+      if (url.pathname === "/pro" || url.pathname === "/pro/" || url.pathname === "/pro.html") {
+        return Response.redirect(new URL("/#signup", url), 301);
       }
       if (url.pathname === "/faq" || url.pathname === "/faq/") {
         const assetUrl = new URL(req.url);

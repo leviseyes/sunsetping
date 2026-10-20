@@ -1,8 +1,8 @@
 # SunsetPing
 
-> SunsetPing tells you if tonight's sunset is worth going outside. It scores a city from 1 to 10 and can email a same-day alert.
+> SunsetPing tells landscape photographers if the light is worth the drive. It scores a city from 1 to 10 and emails a free sunset and golden-hour alert.
 
-SunsetPing is a consumer weather product at https://sunsetping.com. It is not a general forecast. It answers one question: how good is the sunset (or, on Pro, the sunrise) for a specific place.
+SunsetPing is a free consumer weather product at https://sunsetping.com. It is not a general forecast. It answers one question: how good is the sunset or the sunrise for a specific place.
 
 ## How scoring works
 
@@ -16,32 +16,32 @@ The score is a whole number from 1 to 10. It uses the hour around sunset and loo
 - 4 or 5: Maybe a quick peek.
 - 3 or below: Probably skip tonight.
 
-The live score for a city is in the city page HTML at https://sunsetping.com/sunset/<slug> (tonight's sunset time, golden hour, and the 1–10 score, plus sunset time and golden-hour start for the next 7 days). The 7-day list is clock times only. Do not invent a score. Fetch that page. GET https://sunsetping.com/api/score?q=CITY returns tonight's numbers, but robots.txt disallows /api/, so quote the city page. The 7-day sunset quality outlook is a Pro feature and is not on the free city page.
+The live score for a city is in the city page HTML at https://sunsetping.com/sunset/<slug> (tonight's sunset time, golden hour, and the 1–10 score, plus sunset time and golden-hour start for the next 7 days). The 7-day list is clock times only. Do not invent a score. Fetch that page. GET https://sunsetping.com/api/score?q=CITY returns tonight's numbers, but robots.txt disallows /api/, so quote the city page. The 7-day sunset quality outlook is free at GET https://sunsetping.com/api/outlook?q=CITY.
 
-## Pricing
+## Price
 
-- Free: one location and a same-day sunset alert. Checking a score does not require an account.
-- Pro: $3.99 per month, or $29 per year (save 39% versus monthly).
-- Pro includes up to 10 saved spots, sunrise alerts, a 7-day outlook, a day-before heads-up at 4:00 PM local, a minimum-score threshold, and a best-spot ranking in the evening email.
-- Checkout is hosted by Stripe. Card details are entered on Stripe's secure checkout page, never on sunsetping.com. Cancel any time.
+- SunsetPing is free. The price is 0.
+- Checking a score does not require an account.
+- Free alerts include up to 10 saved spots, sunrise alerts, a 7-day outlook, a day-before heads-up at 4:00 PM local, a minimum-score threshold, and a best-spot ranking in the evening email.
+- Sign up at https://sunsetping.com/#signup. There is no paid plan.
 
 ## Common questions
 
-- What is SunsetPing? SunsetPing tells you whether tonight's sunset is worth going outside. You type a city or ZIP code and get a score from 1 to 10, the local sunset time, a short viewing window, and one sentence on why. You can also get an email the same day. Checking a score does not require an account.
+- What is SunsetPing? SunsetPing tells landscape photographers whether the light is worth the drive. You type a city or ZIP code and get a score from 1 to 10, the local sunset time, a short viewing window, and one sentence on why. You can also get a free email the same day. Checking a score does not require an account.
 - How does the sunset score work? The score is a whole number from 1 to 10. It uses the weather in the hour around sunset: low cloud, mid cloud, and high cloud, plus humidity, visibility, and precipitation. Enough broken cloud to catch the color scores higher. A thick low blanket, rain, or poor visibility scores lower. A completely clear sky also scores lower, because there is little for the light to catch. 8 or above means don't miss it. 6 or 7 is worth stepping outside. 4 or 5 is a quick peek. 3 or below means you can probably skip tonight.
-- What is free versus Pro? Free is one location and a same-day sunset alert, sent about three hours before sunset by default. Pro adds up to 10 saved spots, sunrise alerts, a 7-day sunset outlook, a day-before heads-up at 4:00 PM local, a score threshold, and a best-spot ranking in the evening email.
-- How much does Pro cost? Pro is $3.99 a month or $29 a year. Yearly saves 39% compared with paying $3.99 each month.
-- How do alerts arrive? The free alert is for today's sunset, about three hours ahead. Pro can also send a sunrise alert about an hour ahead, and a note at 4:00 PM local about tomorrow if you turn that on.
-- How do I cancel or unsubscribe? Every alert email has an unsubscribe link that stops future emails. Pro is billed through Stripe. Cancel any time. Checkout is hosted by Stripe. Card details are entered on Stripe's secure checkout page, never on sunsetping.com.
+- What do free alerts include? A home location plus up to 10 saved spots, sunrise alerts, a 7-day sunset outlook, a day-before heads-up at 4:00 PM local, a score threshold, and a best-spot ranking in the evening email. The price is 0.
+- How much does SunsetPing cost? SunsetPing is free. The price is 0. Sign up with an email and a city. There is no paid plan.
+- How do alerts arrive? The sunset alert is about three hours ahead. Sunrise alerts are about an hour ahead when turned on, and a day-before note goes out at 4:00 PM local when turned on.
+- How do I cancel or unsubscribe? Every alert email has an unsubscribe link that stops future emails.
 
 ## Pages
 
-- [Home](https://sunsetping.com/): check tonight's sunset
-- [FAQ](https://sunsetping.com/faq): what it is, how scoring works, free versus Pro, pricing
+- [Home](https://sunsetping.com/#signup): free sunset and golden-hour alerts
+- [FAQ](https://sunsetping.com/faq): what it is, how scoring works, what the free alerts include
 - [City index](https://sunsetping.com/sunset): 65 city forecast pages
 - [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, tonight's score, and sunset times for the next 7 days in the HTML
-- [Pro](https://sunsetping.com/pro): yearly plan is the default offer
 - [Sitemap](https://sunsetping.com/sitemap.xml)
 
 City page pattern: https://sunsetping.com/sunset/<city-slug>
+Sunset time pattern: https://sunsetping.com/sunset-time/<city-slug>
 Share-a-forecast pattern: https://sunsetping.com/s/<place>

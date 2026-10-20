@@ -7,10 +7,6 @@ import { PERFECT, createDb, day, flatForecast, geocodeBody, testEnv, withFetch }
 
 const TOKEN = "ab".repeat(32);
 const EMAIL = "Ada@Sunset.test";
-const ENCODED = "ada%40sunset.test";
-const YEARLY = new RegExp(`/api/checkout\\?plan=yearly&(?:amp;)?email=${ENCODED}`);
-const MONTHLY = new RegExp(`/api/checkout\\?plan=monthly&(?:amp;)?email=${ENCODED}`);
-
 function forecastBody() {
   return flatForecast([day("2026-10-14T18:42", PERFECT)]);
 }
@@ -55,7 +51,7 @@ function jsonRequest(email, location) {
   });
 }
 
-test("HTML signup returns the Pro offer with both checkout links", async () => {
+test("HTML signup confirms the free alerts", async () => {
   const db = createDb();
   const env = testEnv(db, { RESEND_API_KEY: "re_test" });
   const sent = [];
@@ -81,16 +77,12 @@ test("HTML signup returns the Pro offer with both checkout links", async () => {
     assert.match(html, /You're in\. We'll email you before sunset in Denver, Colorado\./);
     assert.match(html, /welcome-score">10<span>\/10<\/span>/);
     assert.match(html, /6:42 PM/);
-    assert.match(html, YEARLY);
-    assert.match(html, MONTHLY);
-    assert.match(html, /href="\/api\/checkout\?plan=yearly&amp;email=ada%40sunset\.test" rel="nofollow"/);
-    assert.match(html, /href="\/api\/checkout\?plan=monthly&amp;email=ada%40sunset\.test" rel="nofollow"/);
-    assert.ok(html.indexOf("plan=yearly") < html.indexOf("plan=monthly"));
-    assert.match(html, /\$2\.42\/mo, save 39%/);
-    assert.match(html, /\$3\.99/);
-    assert.match(html, /\$29/);
-    assert.match(html, /No thanks, free is fine/);
+    assert.match(html, /Know when the light will be good before you drive out/);
+    assert.match(html, /Included free/);
     assert.match(html, /Great-sunsets-only/);
+    assert.doesNotMatch(html, /\/api\/checkout/);
+    assert.doesNotMatch(html, /\$3\.99/);
+    assert.doesNotMatch(html, /\$29/);
     assert.equal(sent.length, 0);
     release();
     await Promise.all(pending);
@@ -98,15 +90,15 @@ test("HTML signup returns the Pro offer with both checkout links", async () => {
     assert.equal(sent[0].subject, "You're in: sunset alerts for Denver, Colorado");
     assert.deepEqual(sent[0].to, ["ada@sunset.test"]);
     assert.match(sent[0].html, new RegExp(`https://sunsetping\\.com/api/unsubscribe\\?token=${db.state.subscribers[0].unsubscribe_token}`));
-    assert.match(sent[0].html, new RegExp(`https://sunsetping\\.com/api/checkout\\?plan=yearly&amp;email=${ENCODED}`));
-    assert.ok(sent[0].html.indexOf("plan=yearly") < sent[0].html.indexOf("plan=monthly"));
+    assert.match(sent[0].html, /Included free/);
+    assert.doesNotMatch(sent[0].html, /\/api\/checkout/);
     assert.match(sent[0].html, />10<span[^>]*>\/10<\/span>/);
     assert.match(sent[0].html, /6:42 PM/);
     assert.equal(db.state.sends.filter((row) => row.kind === "welcome").length, 1);
 
     const again = await worker.fetch(formRequest(EMAIL, "Denver"), env, ctx);
     assert.equal(again.status, 200);
-    assert.match(await again.text(), YEARLY);
+    assert.match(await again.text(), /Included free/);
     await Promise.all(pending);
     assert.equal(sent.length, 1);
     assert.equal(db.state.sends.filter((row) => row.kind === "welcome").length, 1);
@@ -123,13 +115,11 @@ test("JSON signup stays compatible and includes the same offer", async () => {
     const body = await res.json();
     assert.equal(body.ok, true);
     assert.equal(body.location, "Denver, Colorado");
-    assert.equal(body.checkout.yearly, `/api/checkout?plan=yearly&email=${ENCODED}`);
-    assert.equal(body.checkout.monthly, `/api/checkout?plan=monthly&email=${ENCODED}`);
+    assert.equal(body.checkout, undefined);
     assert.equal(body.tonight.score, 10);
     assert.equal(body.tonight.sunset, "6:42 PM");
-    assert.match(body.offerHtml, YEARLY);
-    assert.match(body.offerHtml, MONTHLY);
-    assert.match(body.offerHtml, /No thanks, free is fine/);
+    assert.match(body.offerHtml, /Included free/);
+    assert.doesNotMatch(body.offerHtml, /\/api\/checkout/);
     await Promise.all(pending);
   });
 });
@@ -155,8 +145,8 @@ test("welcome email sends once for a new subscriber and dedupes a second attempt
   assert.equal(second.skipped, "deduped");
   assert.equal(sent.length, 1);
   assert.match(sent[0].html, new RegExp(`unsubscribe\\?token=${TOKEN}`));
-  assert.match(sent[0].html, /plan=yearly&amp;email=ada%40sunset\.test/);
-  assert.match(sent[0].html, /\$2\.42\/mo, save 39%/);
+  assert.match(sent[0].html, /Included free/);
+  assert.doesNotMatch(sent[0].html, /\/api\/checkout/);
   assert.equal(db.state.sends.filter((row) => row.kind === "welcome").length, 1);
 });
 
@@ -175,7 +165,7 @@ test("a forecast failure, a sender failure, or a slow forecast does not fail sig
     const html = await res.text();
     assert.match(html, /You're in\. We'll email you before sunset in Denver, Colorado\./);
     assert.doesNotMatch(html, /welcome-score/);
-    assert.match(html, YEARLY);
+    assert.match(html, /Included free/);
     await Promise.all(pending);
   });
 
@@ -198,7 +188,7 @@ test("invalid email is still a 400 for HTML and JSON", async () => {
   const env = testEnv(createDb());
   const html = await worker.fetch(formRequest("nope", "Denver"), env);
   assert.equal(html.status, 400);
-  assert.doesNotMatch(await html.text(), /plan=yearly/);
+  assert.doesNotMatch(await html.text(), /\/api\/checkout/);
   const json = await worker.fetch(jsonRequest("nope", "Denver"), env);
   assert.equal(json.status, 400);
   assert.equal((await json.json()).ok, false);

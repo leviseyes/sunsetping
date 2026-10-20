@@ -1,15 +1,7 @@
-import { PRO_PERKS } from "./email.js";
+import { FREE_PERKS } from "./email.js";
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-export function proCheckoutPaths(email) {
-  const q = encodeURIComponent(String(email || "").trim().toLowerCase());
-  return {
-    yearly: `/api/checkout?plan=yearly&email=${q}`,
-    monthly: `/api/checkout?plan=monthly&email=${q}`,
-  };
 }
 
 const SHELL_HEAD = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -18,9 +10,9 @@ const SHELL_HEAD = `<meta charset="utf-8"><meta name="viewport" content="width=d
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css">`;
 
-function topbar(active) {
+function topbar() {
   return `<header class="topbar"><a class="logo" href="/">SunsetPing</a>
-<nav><a href="/#check">Tonight</a><a href="/#pricing">Pricing</a><a href="/pro"${active === "pro" ? ' aria-current="page"' : ""}>Pro</a></nav></header>`;
+<nav><a href="/#check">Tonight</a><a href="/sunset">Cities</a><a href="/#signup">Free alerts</a></nav></header>`;
 }
 
 export function simplePage(title, message, status = 200) {
@@ -95,7 +87,18 @@ ${topbar()}
 <p class="kicker">Shared sunset</p>
 <h1>Tonight in ${esc(score.location.split(",")[0])}.</h1>
 <div class="result-slot">${scoreCardHtml(score, { sharePath: canonical })}</div>
-<p class="hero-links"><a class="btn" href="/#check">Check another place</a> <a class="btn ghost" href="/pro">See Pro</a></p>
+<p class="hero-links"><a class="btn" href="/#check">Check another place</a> <a class="btn ghost" href="/#signup">Get free alerts</a></p>
+<section class="panel" id="signup" data-welcome-host>
+<h2>Know when the light will be good before you drive out.</h2>
+<p>Free sunset and golden-hour quality alerts for landscape photographers.</p>
+<form class="stack" action="/api/subscribe" method="post">
+<label class="sr-only" for="share-email">Email</label>
+<input id="share-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
+<label class="sr-only" for="share-location">City or ZIP</label>
+<input id="share-location" type="text" name="location" value="${esc(score.location)}" required maxlength="100" aria-label="City or ZIP">
+<button class="btn" type="submit">Get free alerts</button>
+</form>
+</section>
 </main></body></html>`;
   return new Response(html, {
     headers: { "content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=600" },
@@ -135,32 +138,27 @@ function tonightLine(tonight) {
   return `<p class="welcome-tonight"><span class="welcome-score">${esc(tonight.score)}<span>/10</span></span><span class="welcome-sky">${esc(tonight.verdict || "")} · sunset <b>${esc(tonight.sunset || "")}</b>${tz}</span></p>`;
 }
 
-export function welcomeOfferHtml({ location, email, tonight = null } = {}) {
-  const links = proCheckoutPaths(email);
-  const perks = PRO_PERKS.map((line) => `<li>${esc(line)}</li>`).join("");
+export function welcomeOfferHtml({ location, tonight = null } = {}) {
+  const perks = FREE_PERKS.map((line) => `<li>${esc(line)}</li>`).join("");
   return `<div class="welcome-offer" role="status">
 <p class="kicker">Free alerts</p>
 <h2>You're in. We'll email you before sunset in ${esc(location)}.</h2>
-<p class="lede">The same-day note arrives about 3 hours before sunset. Free covers this one place.</p>
+<p class="lede">Know when the light will be good before you drive out. The same-day note arrives about 3 hours before sunset.</p>
 ${tonightLine(tonight)}
-<article class="welcome-pro">
-<p class="eyebrow">Pro</p>
-<h3>Catch more than one horizon.</h3>
+<article class="welcome-included">
+<p class="eyebrow">Included free</p>
+<h3>The whole forecast, for landscape photographers.</h3>
 <ul>${perks}</ul>
-<div class="actions">
-<a class="btn btn-yearly" href="${esc(links.yearly)}" rel="nofollow">Best value · Yearly $29<span>$2.42/mo, save 39%</span></a>
-<a class="btn btn-monthly" href="${esc(links.monthly)}" rel="nofollow">Monthly · $3.99</a>
-</div>
 </article>
-<p class="welcome-pass"><a href="/">No thanks, free is fine</a></p>
+<p class="welcome-pass"><a href="/#signup">Add another spot</a></p>
 </div>`;
 }
 
-export function welcomePage({ location, email, tonight = null } = {}) {
+export function welcomePage({ location, tonight = null } = {}) {
   const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>You're in · SunsetPing</title>
 <meta name="robots" content="noindex"></head>
 <body class="welcome">${topbar()}
-<main class="welcome-main">${welcomeOfferHtml({ location, email, tonight })}</main>
+<main class="welcome-main">${welcomeOfferHtml({ location, tonight })}</main>
 </body></html>`;
   return new Response(html, {
     status: 200,
@@ -172,49 +170,3 @@ export function welcomePage({ location, email, tonight = null } = {}) {
   });
 }
 
-/** Same plan strings the Pro and home pages already show. */
-export const CHECKOUT_PLAN_LABEL = {
-  monthly: "Pro monthly ($3.99/month)",
-  yearly: "Pro yearly ($29/year)",
-};
-
-export function checkoutPlaceholder({ plan }) {
-  const label = CHECKOUT_PLAN_LABEL[plan === "yearly" ? "yearly" : "monthly"];
-  const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>Checkout · SunsetPing</title>
-<meta name="robots" content="noindex"></head>
-<body class="gate">${topbar("pro")}<main class="gate-card">
-<a class="logo" href="/">SunsetPing</a>
-<h1>No charge was made.</h1>
-<p>Secure checkout by Stripe did not start for ${esc(label)}, so nothing was billed.</p>
-<p><a class="btn" href="/pro">Back to Pro</a></p>
-</main></body></html>`;
-  return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
-}
-
-/** Human confirmation step. Does not call Stripe and does not submit itself. */
-export function checkoutInterstitial({ plan, email }) {
-  const key = plan === "yearly" ? "yearly" : "monthly";
-  const label = CHECKOUT_PLAN_LABEL[key];
-  const emailField = email ? `<input type="hidden" name="email" value="${esc(email)}">` : "";
-  const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}<title>Continue to secure checkout · SunsetPing</title>
-<meta name="robots" content="noindex, nofollow"></head>
-<body class="gate">${topbar("pro")}<main class="gate-card">
-<a class="logo" href="/">SunsetPing</a>
-<h1>Continue to secure checkout</h1>
-<p>${esc(label)}. Checkout is hosted by Stripe. Card details are entered on Stripe's secure checkout page, never on sunsetping.com. Cancel any time.</p>
-<form method="GET" action="/api/checkout">
-<input type="hidden" name="plan" value="${key}">
-${emailField}<input type="hidden" name="confirm" value="1">
-<button class="btn" type="submit">Continue</button>
-</form>
-<p><a href="/pro">Back to Pro</a></p>
-</main></body></html>`;
-  return new Response(html, {
-    status: 200,
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "private, no-store",
-      "x-robots-tag": "noindex, nofollow",
-    },
-  });
-}

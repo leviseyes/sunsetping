@@ -166,27 +166,39 @@ test("share pages carry Open Graph tags and /lookup redirects", async () => {
   });
 });
 
-test("checkout explains that nothing was charged until Stripe is configured", async () => {
-  const env = testEnv(createDb());
-  const open = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly"), env);
-  const html = await open.text();
-  assert.equal(open.status, 200);
-  assert.match(html, /No charge was made/);
-  assert.match(html, /Pro monthly/);
-  assert.doesNotMatch(html, /STRIPE_PAYMENT_LINK/);
-  assert.doesNotMatch(html, /placeholder/i);
-  assert.doesNotMatch(html, /card number/i);
-  const yearly = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly"), env);
-  const yearlyHtml = await yearly.text();
-  assert.match(yearlyHtml, /Pro yearly/);
-  assert.doesNotMatch(yearlyHtml, /STRIPE_PAYMENT_LINK/);
-  const unsafe = testEnv(createDb(), { STRIPE_PAYMENT_LINK_MONTHLY: "http://buy.stripe.com/not-https" });
-  const blocked = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly"), unsafe);
-  assert.equal(blocked.status, 200);
-  const ready = testEnv(createDb(), { STRIPE_PAYMENT_LINK: "https://buy.stripe.com/test_placeholder" });
-  const go = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly"), ready);
-  assert.equal(go.status, 302);
-  assert.equal(go.headers.get("location"), "https://buy.stripe.com/test_placeholder");
+test("checkout no longer returns a Stripe redirect", async () => {
+  const env = testEnv(createDb(), {
+    STRIPE_SECRET_KEY: "rk_test_should_not_be_used",
+    STRIPE_PAYMENT_LINK: "https://buy.stripe.com/test_placeholder",
+    STRIPE_PAYMENT_LINK_MONTHLY: "https://buy.stripe.com/test_placeholder",
+    STRIPE_PAYMENT_LINK_YEARLY: "https://buy.stripe.com/test_placeholder",
+  });
+  let called = false;
+  await withFetch(async () => {
+    called = true;
+    return Response.json({ url: "https://checkout.stripe.com/c/pay/cs_test" });
+  }, async () => {
+    for (const plan of ["monthly", "yearly"]) {
+      const res = await worker.fetch(new Request(`https://sunsetping.com/api/checkout?plan=${plan}&email=ada@sunset.test&confirm=1`, {
+        headers: {
+          "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-dest": "document",
+          "sec-fetch-user": "?1",
+          "sec-fetch-site": "same-origin",
+        },
+      }), env);
+      assert.equal(res.status, 302);
+      const loc = res.headers.get("location") || "";
+      assert.match(loc, /\/#signup$/);
+      assert.doesNotMatch(loc, /stripe/i);
+      assert.doesNotMatch(loc, /checkout\.stripe/i);
+    }
+    const pro = await worker.fetch(new Request("https://sunsetping.com/pro"), env);
+    assert.equal(pro.status, 301);
+    assert.match(pro.headers.get("location") || "", /\/#signup$/);
+  });
+  assert.equal(called, false);
 });
 
 test("subscribe, unsubscribe, saved spots, and Pro settings", async () => {
@@ -202,10 +214,6 @@ test("subscribe, unsubscribe, saved spots, and Pro settings", async () => {
     assert.equal(row.plan, "free");
     assert.equal(row.location, "Denver, Colorado");
 
-    const denied = await worker.fetch(new Request("https://sunsetping.com/api/locations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: row.email, location: "Moab" }) }), env);
-    assert.equal(denied.status, 403);
-
-    row.plan = "pro";
     for (let i = 0; i < 10; i++) {
       const saved = await worker.fetch(new Request("https://sunsetping.com/api/locations", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: row.email, location: "Moab" }) }), env);
       assert.equal(saved.status, 201, await saved.clone().text());
@@ -222,10 +230,9 @@ test("subscribe, unsubscribe, saved spots, and Pro settings", async () => {
     assert.equal(account.leadMinutes, 120);
     assert.equal(account.spots.length, 10);
 
-    row.plan = "free";
     const freeSettings = await worker.fetch(new Request("https://sunsetping.com/api/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email: row.email, scoreThreshold: 9 }) }), env);
-    assert.equal(freeSettings.status, 403);
-    row.plan = "pro";
+    assert.equal(freeSettings.status, 200);
+    assert.equal((await freeSettings.json()).scoreThreshold, 9);
 
     const bye = await worker.fetch(new Request(`https://sunsetping.com/api/unsubscribe?token=${row.unsubscribe_token}`), env);
     assert.match(await bye.text(), /Unsubscribed/);
@@ -233,21 +240,29 @@ test("subscribe, unsubscribe, saved spots, and Pro settings", async () => {
   });
 });
 
-test("best-spot for an account requires Pro", async () => {
+test("best-spot for a free subscriber ranks saved spots", async () => {
   const db = createDb({
     subscribers: [{ id: 1, email: "a@b.co", location: "Denver, Colorado", lat: 39.7, lon: -104.9, tz: "America/Denver", plan: "free", score_threshold: null, sunrise_alerts: 0, day_before: 0, lead_minutes: 180, unsubscribe_token: TOKEN, status: "active" }],
+    saved: [{ id: 3, subscriber_id: 1, label: "Key West, Florida", lat: 24.55, lon: -81.78 }],
   });
-  const res = await worker.fetch(new Request("https://sunsetping.com/api/best-spot?email=a@b.co"), testEnv(db));
-  assert.equal(res.status, 403);
+  const forecast = (lat) => forecastFor(lat < 30 ? PERFECT : WASHED);
+  await withFetch(openMeteo({ forecast }), async () => {
+    const res = await worker.fetch(new Request("https://sunsetping.com/api/best-spot?email=a@b.co"), testEnv(db));
+    const body = await res.json();
+    assert.equal(res.status, 200);
+    assert.equal(body.best.location, "Key West, Florida");
+    assert.equal(body.ranking[0].score, 10);
+  });
 });
 
-test("scheduled hook and pro page asset are wired", async () => {
+test("scheduled hook runs and /pro redirects to signup", async () => {
   const db = createDb();
   const pending = [];
   await worker.scheduled({ scheduledTime: Date.now() }, testEnv(db), { waitUntil(p) { pending.push(p); } });
   await Promise.all(pending);
   const pro = await worker.fetch(new Request("https://sunsetping.com/pro"), testEnv(db));
-  assert.equal(await pro.text(), "/pro.html");
+  assert.equal(pro.status, 301);
+  assert.match(pro.headers.get("location") || "", /\/#signup$/);
 });
 
 test("served pages do not show payment placeholder notes", async () => {
@@ -255,28 +270,30 @@ test("served pages do not show payment placeholder notes", async () => {
   const pages = files.map((file) => readFileSync(new URL(file, import.meta.url), "utf8"));
   const monthly = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly"), testEnv(createDb()));
   const yearly = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly"), testEnv(createDb()));
-  pages.push(await monthly.text(), await yearly.text());
+  assert.equal(monthly.status, 302);
+  assert.equal(yearly.status, 302);
+  assert.match(monthly.headers.get("location") || "", /\/#signup$/);
+  assert.doesNotMatch(monthly.headers.get("location") || "", /stripe/i);
   pages.push(await welcomePage({ location: "Denver, Colorado", email: "ada@sunset.test" }).text());
   for (const html of pages) {
     assert.doesNotMatch(html, /STRIPE_PAYMENT_LINK/);
     assert.doesNotMatch(html, /payment placeholder/i);
     assert.doesNotMatch(html, /checkout placeholder/i);
     assert.doesNotMatch(html, /<p class="note">[^<]*placeholder/i);
+    assert.doesNotMatch(html, /\$3\.99/);
+    assert.doesNotMatch(html, /\$29/);
   }
 });
 
-test("homepage and pro page describe the free and paid split", () => {
+test("homepage signup is the primary free offer", () => {
   const home = readFileSync(new URL("../public/index.html", import.meta.url), "utf8");
-  const pro = readFileSync(new URL("../public/pro.html", import.meta.url), "utf8");
   assert.match(home, /Check tonight's sunset/);
-  assert.match(home, /id="pricing"/);
-  assert.match(home, /\$3\.99/);
-  assert.match(home, /\$29/);
-  assert.match(home, /Secure checkout by Stripe\./);
-  assert.match(pro, /7-day/);
-  assert.match(pro, /Sunrise/);
-  assert.match(pro, /score is at least N|Score threshold/);
-  assert.match(pro, /Best spot tonight/);
+  assert.match(home, /id="signup"/);
+  assert.match(home, /Know when the light will be good before you drive out/);
+  assert.match(home, /action="\/api\/subscribe"/);
+  assert.match(home, /"price":"0"/);
+  assert.doesNotMatch(home, /\$3\.99/);
+  assert.doesNotMatch(home, /\/api\/checkout/);
   const migration = readFileSync(new URL("../migrations/0002_pro.sql", import.meta.url), "utf8");
   for (const column of ["plan", "score_threshold", "sunrise_alerts", "day_before", "saved_locations", "alert_sends"]) {
     assert.match(migration, new RegExp(column));

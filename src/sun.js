@@ -5,7 +5,7 @@
  * Julian-cycle sunset formula. Accurate to a couple of minutes. City pages
  * snap the week to tonight's forecast sunset when that snap is within a few
  * minutes, so the table matches the clock already on the page. No weather
- * fetch: the 7-day quality outlook stays a Pro feature.
+ * fetch: this table is clock times only.
  */
 
 import { addMinutesToIso, formatClock, formatLongDate, tzAbbrev, wallParts, zonedWallToUtc } from "./scoring.js";

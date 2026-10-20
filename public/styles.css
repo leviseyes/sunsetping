@@ -19,7 +19,7 @@
 }
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 12px + env(safe-area-inset-top, 0px)); }
-body { margin: 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
 a { color: inherit; }
 button, input, select { font: inherit; color: inherit; }
 img { max-width: 100%; }
@@ -78,14 +78,17 @@ h1 { font-size: clamp(56px, 7vw, 96px); line-height: 0.92; margin: 0 0 18px; max
 .search, .signup {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
-.search {
+.search, .stage .hero-signup .signup {
   background: rgba(255, 252, 248, 0.96);
   color: var(--ink);
   border-radius: 999px;
   padding: 6px 6px 6px 8px;
   box-shadow: 0 18px 50px rgba(20, 8, 4, 0.28);
-  max-width: 760px;
+  max-width: 820px;
 }
+.stage .hero-signup { margin: 0 0 18px; }
+.stage .hero-signup .signup input { background: transparent; }
+.stage .lookup-label { margin: 18px 0 8px; font-size: 14px; color: rgba(255, 248, 240, 0.82); }
 .search input, .signup input, .stack input, .stack select, .inline-form input {
   border: 0; background: transparent; padding: 0 16px; font-size: 16px; min-width: 0;
   height: 48px; min-height: 48px; max-height: 48px;
@@ -330,7 +333,7 @@ footer a { color: var(--ink); }
 .week-times th { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
 .week-times td { font-size: 16px; font-variant-numeric: tabular-nums; }
 .week-times tr:last-child td { border-bottom: 0; }
-.week-pro { margin: 0; line-height: 1.5; max-width: 42em; }
+.week-cta, .week-pro { margin: 0; line-height: 1.5; max-width: 42em; }
 .week-times a { color: var(--ember); font-weight: 650; }
 .city-qa { margin: 0 0 28px; }
 .city-qa h2 { font-size: clamp(32px, 4vw, 48px); line-height: 1.05; margin: 0 0 8px; max-width: 16em; }
@@ -392,6 +395,60 @@ body.welcome { background: var(--cream); }
 }
 .welcome-score span { font-size: 16px; color: var(--muted); letter-spacing: 0; margin-left: 1px; }
 .welcome-sky { font-size: 16px; line-height: 1.35; }
+.welcome-included {
+  background: var(--paper);
+  border-radius: 28px;
+  padding: 20px 16px 16px;
+  box-shadow: var(--shadow);
+}
+.welcome-included .eyebrow { color: var(--ember); margin-bottom: 6px; }
+.welcome-included h3 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(26px, 6vw, 32px);
+  line-height: 1.05;
+  margin: 0 0 10px;
+  letter-spacing: -0.03em;
+}
+.welcome-included ul { margin: 0; padding-left: 18px; }
+.welcome-included li { margin: 0 0 4px; line-height: 1.35; }
+.signup-sticky {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  background: rgba(255, 252, 248, 0.96);
+  border-top: 1px solid var(--line);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 30px rgba(28, 22, 18, 0.08);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.signup-sticky-form, .footer-signup {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.signup-sticky-copy, .footer-signup p {
+  margin: 0;
+  font-weight: 650;
+  flex: 1 1 220px;
+}
+.signup-sticky input, .footer-signup input {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 999px;
+  padding: 0 16px;
+  height: 48px;
+  min-height: 48px;
+  flex: 1 1 180px;
+}
+.site-footer { padding: 28px 20px 8px; }
+.footer-links { margin: 12px auto 0; width: min(1120px, 100%); color: var(--muted); font-size: 14px; }
 .welcome-pro {
   color: #fff;
   border-radius: 28px;

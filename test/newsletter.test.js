@@ -79,8 +79,9 @@ test("newsletter template: free upsell, pro skip, unsubscribe, and optional feat
   assert.match(free, /Lock exposure on the sky/);
   assert.match(free, /What's new/);
   assert.match(free, /Saved spots now sort themselves\./);
-  assert.match(free, /href="https:\/\/sunsetping\.com\/pro"/);
-  assert.match(free, /Monthly \$3\.99 or yearly \$29/);
+  assert.doesNotMatch(free, /sunsetping\.com\/pro/);
+  assert.doesNotMatch(free, /\$3\.99/);
+  assert.doesNotMatch(free, /\$29/);
   assert.match(free, new RegExp(`unsubscribe\\?token=${FREE_TOKEN}`));
   assert.match(free, /background:#f4efe8/);
   assert.match(free, /Georgia/);
@@ -144,7 +145,8 @@ test("free and pro copies differ, and a failed send can be retried", async () =>
   const free = messages.find((msg) => msg.to === "ada@sunset.test");
   const pro = messages.find((msg) => msg.to === "pro@sunset.test");
   assert.match(free.html, new RegExp(FREE_TOKEN));
-  assert.match(free.html, /Monthly \$3\.99 or yearly \$29/);
+  assert.doesNotMatch(free.html, /\$3\.99/);
+  assert.doesNotMatch(free.html, /\$29/);
   assert.match(pro.html, new RegExp(PRO_TOKEN));
   assert.doesNotMatch(pro.html, /sunsetping\.com\/pro/);
   assert.doesNotMatch(pro.html, new RegExp(GONE_TOKEN));

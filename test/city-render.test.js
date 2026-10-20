@@ -125,7 +125,11 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(html, /<p class="city-score"><strong>10\/10<\/strong>/);
     assert.match(html, /Sunset 6:59 PM CDT\./);
     assert.match(html, /fetch\("\/api\/score\?q="/);
+    assert.match(html, /id="signup"/);
+    assert.match(html, /Know when the light will be good before you drive out/);
     assert.match(html, /action="\/api\/subscribe"/);
+    assert.match(html, /class="signup-sticky"/);
+    assert.match(html, /class="footer-signup"/);
     assert.match(html, /name="location" value="Austin, Texas"/);
     assert.match(html, /Mount Bonnell/);
     const pairs = cityQa(html);
@@ -170,7 +174,8 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(week[0], /Sunset times this week in Austin/);
     assert.match(week[0], /Local time \(CDT, America\/Chicago\)/);
     assert.match(week[0], /Golden hour starts 60 minutes before sunset/);
-    assert.match(week[0], /href="\/pro">Pro sends a 7-day sunset quality outlook/);
+    assert.match(week[0], /href="#signup">Get free sunset and golden-hour alerts/);
+    assert.doesNotMatch(week[0], /\/pro/);
     assert.doesNotMatch(week[0], /\/10/);
     assert.doesNotMatch(week[0], /Don't miss it|Worth stepping outside|Probably skip/);
     const rows = [...week[0].matchAll(/<tr><td><time datetime="([^"]+)">([^<]+)<\/time><\/td><td>([^<]+)<\/td><td>([^<]+)<\/td><\/tr>/g)];
@@ -201,6 +206,10 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(timeHtml, /Sunset times this week in Austin/);
     assert.match(timeHtml, /datetime="2026-10-21"/);
     assert.match(timeHtml, /Sunset times for the next 7 days are listed on this page/);
+    assert.match(timeHtml, /id="signup"/);
+    assert.match(timeHtml, /action="\/api\/subscribe"/);
+    assert.match(timeHtml, /name="location" value="Austin, Texas"/);
+    assert.match(timeHtml, /Know when the light will be good before you drive out/);
     const timeList = jsonLdBlocks(timeHtml).find((block) => block["@type"] === "ItemList");
     assert.equal(timeList.itemListElement.length, 7);
   });
