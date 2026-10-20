@@ -318,11 +318,14 @@ function liveScoreHtml(city, score) {
 </section>`;
 }
 
-function cityHtml(env, city, score) {
+function cityHtml(env, city, score, variant = "") {
   const base = origin(env);
-  const canonical = `${base}/sunset/${city.slug}`;
-  const question = `Will tonight's sunset be good in ${city.city}?`;
-  const description = score
+  const isTime = variant === "time";
+  const canonical = isTime ? `${base}/sunset-time/${city.slug}` : `${base}/sunset/${city.slug}`;
+  const question = isTime ? `What time is sunset today in ${city.city}?` : `Will tonight's sunset be good in ${city.city}?`;
+  const description = isTime
+    ? (score ? `Sunset time today in ${city.city}: ${score.sunset}${score.tz ? " " + score.tz : ""}. Tonight's sunset quality score is ${score.score}/10. Best spots and a free daily alert.` : `Sunset time today in ${city.city}, ${city.region}, plus tonight's sunset quality score, best spots and a free daily alert.`)
+    : score
     ? cityMetaDescription(city.city, score)
     : `Tonight's sunset score for ${city.city}, ${city.region}. Sunset time, where to stand (${city.spots[0]}), and a free alert.`;
   const nearby = nearbyCities(city).map((other) =>
@@ -335,7 +338,7 @@ function cityHtml(env, city, score) {
   const shareHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(canonical)}`;
   const qa = cityQuickAnswers(city, score);
   return `<!doctype html><html lang="en"><head>${head({
-    title: score ? cityPageTitle(city.city, score) : `${question} · SunsetPing`,
+    title: isTime ? (score ? `Sunset Time Today in ${city.city}: ${score.sunset} (${score.score}/10) · SunsetPing` : `Sunset Time Today in ${city.city} · SunsetPing`) : score ? cityPageTitle(city.city, score) : `${question} · SunsetPing`,
     description,
     canonical,
     image: `${base}/og/${city.slug}.png`,
@@ -379,6 +382,7 @@ ${quickAnswersHtml(city, qa)}
 </section>
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/sunset">All cities</a></nav>
+<p>${isTime ? `<a href="/sunset/${esc(city.slug)}">Will tonight's sunset be good in ${esc(city.city)}?</a>` : `<a href="/sunset-time/${esc(city.slug)}">Sunset time today in ${esc(city.city)}</a>`}</p>
 </main>${footer()}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
 }
 
@@ -399,9 +403,9 @@ function edgeCache() {
   }
 }
 
-function cityCacheRequest(requestUrl, slug) {
+function cityCacheRequest(requestUrl, slug, variant = "") {
   const key = new URL(requestUrl instanceof URL ? requestUrl.href : String(requestUrl));
-  key.pathname = `/sunset/${slug}`;
+  key.pathname = variant === "time" ? `/sunset-time/${slug}` : `/sunset/${slug}`;
   key.search = "";
   key.hash = "";
   return new Request(key.toString(), { method: "GET" });
@@ -476,7 +480,7 @@ export async function sunsetCity(env, slug, options = {}) {
   if (!city) return simplePage("No city page", "That sunset city isn't in the guide. Try the city index.", 404);
   try {
     const cache = options.skipScore ? null : edgeCache();
-    const cacheKey = options.requestUrl ? cityCacheRequest(options.requestUrl, city.slug) : null;
+    const cacheKey = options.requestUrl ? cityCacheRequest(options.requestUrl, city.slug, options.variant) : null;
     if (cache && cacheKey) {
       const hit = await cache.match(cacheKey).catch(() => null);
       if (hit) return hit;
@@ -490,7 +494,7 @@ export async function sunsetCity(env, slug, options = {}) {
         score = null;
       }
     }
-    const response = cityResponse(cityHtml(env, city, score), score);
+    const response = cityResponse(cityHtml(env, city, score, options.variant), score);
     if (score && cache && cacheKey) {
       try {
         await remember(options.ctx, cache.put(cacheKey, response.clone()));
@@ -501,7 +505,7 @@ export async function sunsetCity(env, slug, options = {}) {
     return response;
   } catch (err) {
     console.log(JSON.stringify({ event: "city_score_fallback", slug: city.slug, message: String(err?.message || err) }));
-    return cityResponse(cityHtml(env, city, null), null);
+    return cityResponse(cityHtml(env, city, null, options.variant), null);
   }
 }
 
@@ -517,10 +521,10 @@ export function indexNowKeyResponse() {
 export function sitemapXml(env) {
   const base = origin(env);
   const lastmod = citySitemapLastmod();
-  const urls = ["/", "/pro", "/faq", "/sunset", ...CITIES.map((city) => `/sunset/${city.slug}`)];
+  const urls = ["/", "/pro", "/faq", "/sunset", ...CITIES.map((city) => `/sunset/${city.slug}`), ...CITIES.map((city) => `/sunset-time/${city.slug}`)];
   const body = urls.map((path) => {
     const loc = `${base}${path}`;
-    if (path === "/sunset" || path.startsWith("/sunset/")) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;
+    if (path === "/sunset" || path.startsWith("/sunset/") || path.startsWith("/sunset-time/")) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;
     return `  <url><loc>${loc}</loc></url>`;
   }).join("\n");
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
@@ -571,6 +575,11 @@ export async function growthRoute(url, env, ctx, options = {}) {
     const slug = decodeURIComponent(path.slice("/sunset/".length));
     if (!slug || slug.includes("/")) return simplePage("No city page", "That sunset city isn't in the guide. Try the city index.", 404);
     return sunsetCity(env, slug, { ctx, requestUrl: url, skipScore: options.skipScore === true });
+  }
+  if (path.startsWith("/sunset-time/")) {
+    const slug = decodeURIComponent(path.slice("/sunset-time/".length));
+    if (!slug || slug.includes("/")) return simplePage("No city page", "That sunset city isn't in the guide. Try the city index.", 404);
+    return sunsetCity(env, slug, { ctx, requestUrl: url, skipScore: options.skipScore === true, variant: "time" });
   }
   return null;
 }

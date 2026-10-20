@@ -112,14 +112,15 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
     assert.match(xml, new RegExp(`<loc>${path}</loc>`));
   }
   for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc>`));
-  assert.equal(xml.match(/<loc>/g).length, 69);
+  for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset-time/${city.slug}</loc>`));
+  assert.equal(xml.match(/<loc>/g).length, 4 + CITIES.length * 2);
   const lastmod = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length + 1);
+  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length * 2 + 1);
   for (const city of CITIES) {
     assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc><lastmod>${lastmod}</lastmod>`));
   }
@@ -290,4 +291,14 @@ test("the cron puts the strong upsell only on a free user's great tonight", asyn
   });
   assert.match(paid[0].html, /Share tonight's forecast/);
   assert.doesNotMatch(paid[0].html, /save 39%/);
+});
+
+test("sunset-time pages render with their own title and canonical", async () => {
+  const res = await worker.fetch(new Request("https://sunsetping.com/sunset-time/san-diego"), testEnv(createDb(), { CITY_SCORE_TIMEOUT_MS: "20" }));
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /Sunset Time Today in San Diego/);
+  assert.match(html, /rel="canonical" href="[^"]*\/sunset-time\/san-diego"/);
+  const missing = await worker.fetch(new Request("https://sunsetping.com/sunset-time/nowhere"), testEnv(createDb()));
+  assert.equal(missing.status, 404);
 });
