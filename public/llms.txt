@@ -16,7 +16,7 @@ The score is a whole number from 1 to 10. It uses the hour around sunset and loo
 - 4 or 5: Maybe a quick peek.
 - 3 or below: Probably skip tonight.
 
-The live score for a city is in the city page HTML at https://sunsetping.com/sunset/<slug> (sunset time, golden hour, and the 1–10 score). Do not invent a score. Fetch that page. GET https://sunsetping.com/api/score?q=CITY returns the same numbers, but robots.txt disallows /api/, so quote the city page.
+The live score for a city is in the city page HTML at https://sunsetping.com/sunset/<slug> (tonight's sunset time, golden hour, and the 1–10 score, plus sunset time and golden-hour start for the next 7 days). The 7-day list is clock times only. Do not invent a score. Fetch that page. GET https://sunsetping.com/api/score?q=CITY returns tonight's numbers, but robots.txt disallows /api/, so quote the city page. The 7-day sunset quality outlook is a Pro feature and is not on the free city page.
 
 ## Pricing
 
@@ -39,7 +39,7 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 - [Home](https://sunsetping.com/): check tonight's sunset
 - [FAQ](https://sunsetping.com/faq): what it is, how scoring works, free versus Pro, pricing
 - [City index](https://sunsetping.com/sunset): 65 city forecast pages
-- [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, and tonight's score in the HTML
+- [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, tonight's score, and sunset times for the next 7 days in the HTML
 - [Pro](https://sunsetping.com/pro): yearly plan is the default offer
 - [Sitemap](https://sunsetping.com/sitemap.xml)
 

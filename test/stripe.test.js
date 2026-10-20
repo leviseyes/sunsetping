@@ -482,6 +482,105 @@ test("checkout opens a Stripe session only for a real top-level navigation", asy
   });
 });
 
+test("ips-agent never opens a Stripe Checkout Session, and normal browsers still do", async () => {
+  const KEY = "rk_test_ips_agent";
+  const session = "https://checkout.stripe.com/c/pay/cs_test_ips_agent";
+  const calls = [];
+  const db = createDb();
+  const env = testEnv(db, { STRIPE_SECRET_KEY: KEY, STRIPE_PAYMENT_LINK_MONTHLY: LINK, STRIPE_PAYMENT_LINK_YEARLY: LINK });
+  const ips = "Mozilla/5.0 (compatible; ips-agent)";
+  const nav = {
+    "sec-fetch-mode": "navigate",
+    "sec-fetch-dest": "document",
+    "accept-language": "en-US,en;q=0.9",
+  };
+  await withFetch(async (url) => {
+    calls.push(String(url));
+    return Response.json({ id: "cs_test_ips_agent", url: session });
+  }, async () => {
+    for (const plan of ["monthly", "yearly"]) {
+      const open = await worker.fetch(new Request(`https://sunsetping.com/api/checkout?plan=${plan}`, {
+        headers: { "user-agent": ips },
+      }), env);
+      assert.equal(open.status, 302, plan);
+      assert.equal(new URL(open.headers.get("location")).pathname, "/pro", plan);
+      const confirmed = await worker.fetch(new Request(`https://sunsetping.com/api/checkout?plan=${plan}&confirm=1`, {
+        headers: { "user-agent": ips, ...nav },
+      }), env);
+      assert.equal(confirmed.status, 302, `${plan} confirm`);
+      assert.equal(new URL(confirmed.headers.get("location")).pathname, "/pro");
+    }
+    const sibling = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": "Mozilla/5.0 (compatible; ExampleMonitor/1.0)" },
+    }), env);
+    assert.equal(sibling.status, 302);
+    assert.equal(new URL(sibling.headers.get("location")).pathname, "/pro");
+    assert.equal(calls.length, 0);
+
+    const chrome = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+    const chromeHeld = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": chrome },
+    }), env);
+    assert.equal(chromeHeld.status, 200);
+    assert.match(await chromeHeld.text(), /Continue to secure checkout/);
+    const chromeGo = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly&confirm=1", {
+      headers: { "user-agent": chrome },
+    }), env);
+    assert.equal(chromeGo.status, 303);
+    assert.equal(chromeGo.headers.get("location"), session);
+    const chromeNav = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": chrome, ...nav },
+    }), env);
+    assert.equal(chromeNav.status, 303);
+
+    const safari = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15";
+    const safariGo = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": safari },
+    }), env);
+    assert.equal(safariGo.status, 303);
+    const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
+    const iphoneGo = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": iphone },
+    }), env);
+    assert.equal(iphoneGo.status, 303);
+
+    const firefox = "Mozilla/5.0 (Android 14; Mobile; rv:126.0) Gecko/126.0 Firefox/126.0";
+    const firefoxHeld = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": firefox },
+    }), env);
+    assert.equal(firefoxHeld.status, 200);
+    assert.match(await firefoxHeld.text(), /Continue to secure checkout/);
+    const firefoxGo = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly&confirm=1", {
+      headers: { "user-agent": firefox },
+    }), env);
+    assert.equal(firefoxGo.status, 303);
+
+    const edge = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0";
+    const edgeHeld = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": edge },
+    }), env);
+    assert.equal(edgeHeld.status, 200);
+    const edgeGo = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly", {
+      headers: { "user-agent": edge, ...nav },
+    }), env);
+    assert.equal(edgeGo.status, 303);
+    const edgios = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) EdgiOS/120.0.2210.150 Version/17.0 Mobile/15E148 Safari/604.1";
+    const edgiosGo = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly", {
+      headers: { "user-agent": edgios },
+    }), env);
+    assert.equal(edgiosGo.status, 303);
+  });
+  assert.equal(calls.length, 7);
+  const crawlerRows = db.state.checkoutAttempts.filter((row) => row.ua === ips || row.ua.startsWith("Mozilla/5.0 (compatible; ExampleMonitor"));
+  assert.equal(crawlerRows.length, 5);
+  for (const row of crawlerRows) {
+    assert.equal(row.outcome, "crawler_redirect");
+    assert.equal(row.session_id_suffix, null);
+  }
+  assert.equal(crawlerRows.filter((row) => row.plan === "monthly" && row.confirm === 0 && row.ua === ips).length, 1);
+  assert.equal(crawlerRows.filter((row) => row.plan === "yearly" && row.confirm === 1 && row.ua === ips).length, 1);
+});
+
 test("checkout interstitial escapes the email and does not include it when absent", async () => {
   const env = testEnv(createDb(), { STRIPE_SECRET_KEY: "rk_test_nav" });
   await withFetch(async () => {

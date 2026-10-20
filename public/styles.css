@@ -321,6 +321,17 @@ footer a { color: var(--ink); }
 .city-fact { margin: 0 0 16px; font-size: 18px; line-height: 1.45; }
 .city-score { margin: 0 0 6px; font-size: 18px; }
 .city-score strong { font-family: var(--serif); font-size: 64px; font-weight: 400; letter-spacing: -0.04em; display: block; line-height: .9; }
+.week-times { margin: 0 0 28px; }
+.week-times h2 { font-size: clamp(32px, 4vw, 48px); line-height: 1.05; margin: 0 0 8px; max-width: 16em; }
+.week-note { margin: 0; color: var(--muted); line-height: 1.5; max-width: 42em; }
+.week-table { overflow-x: auto; background: var(--paper); border: 1px solid var(--line); border-radius: 18px; margin: 14px 0 12px; }
+.week-times table { width: 100%; border-collapse: collapse; }
+.week-times th, .week-times td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: baseline; }
+.week-times th { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+.week-times td { font-size: 16px; font-variant-numeric: tabular-nums; }
+.week-times tr:last-child td { border-bottom: 0; }
+.week-pro { margin: 0; line-height: 1.5; max-width: 42em; }
+.week-times a { color: var(--ember); font-weight: 650; }
 .city-qa { margin: 0 0 28px; }
 .city-qa h2 { font-size: clamp(32px, 4vw, 48px); line-height: 1.05; margin: 0 0 8px; max-width: 16em; }
 .city-qa h3 { font-family: var(--serif); font-size: 26px; font-weight: 400; letter-spacing: -0.02em; margin: 18px 0 4px; }

@@ -3,6 +3,7 @@ import { INDEXNOW_KEY } from "./indexnow.js";
 import { fetchForecast, resolvePlace } from "./openmeteo.js";
 import { simplePage } from "./pages.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
+import { weekSunsetTimes } from "./sun.js";
 
 const SITE = "https://sunsetping.com";
 const OG_IMAGE = `${SITE}/images/hero-sunset.jpg`;
@@ -106,6 +107,11 @@ export function cityPageTitle(cityName, score) {
 export function cityMetaDescription(cityName, score) {
   const tz = score.tz ? ` ${score.tz}` : "";
   return `Sunset time today in ${cityName} is ${score.sunset}${tz}. Tonight's SunsetPing score is ${score.score}/10: ${score.verdict}.`;
+}
+
+function describeWithWeek(description, week) {
+  if (!week?.days?.length) return description;
+  return `${description} Sunset times for the next 7 days are listed on this page.`;
 }
 
 /** Calendar date used as sitemap <lastmod> for city pages. US Pacific, so it stays "today" through the evening. */
@@ -291,6 +297,40 @@ function quickAnswersHtml(city, qa) {
   return `<section class="city-qa" aria-label="${esc(`Sunset in ${city.city} — quick answers`)}"><h2>Sunset in ${esc(city.city)} — quick answers</h2>${body}</section>`;
 }
 
+function weekJsonLd(city, week) {
+  if (!week?.days?.length) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Sunset times this week in ${city.city}`,
+    numberOfItems: week.days.length,
+    itemListOrder: "https://schema.org/ItemListOrderAscending",
+    itemListElement: week.days.map((day, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: day.label,
+      description: `Sunset ${day.sunset} ${day.tz}. Golden hour starts ${day.goldenHourStart} ${day.tz}.`,
+    })),
+  };
+}
+
+function weekTimesHtml(city, week) {
+  if (!week?.days?.length) return "";
+  const where = week.sameTz ? `${week.sameTz}, ${week.timeZone}` : week.timeZone;
+  const rows = week.days.map((day) =>
+    `<tr><td><time datetime="${esc(day.date)}">${esc(day.shortLabel)}</time></td><td>${esc(day.sunset)} ${esc(day.tz)}</td><td>${esc(day.goldenHourStart)} ${esc(day.tz)}</td></tr>`
+  ).join("");
+  return `<section class="week-times" id="sunset-week" aria-labelledby="sunset-week-title">
+<h2 id="sunset-week-title">Sunset times this week in ${esc(city.city)}</h2>
+<p class="week-note">Local time (${esc(where)}). Golden hour starts 60 minutes before sunset.</p>
+<div class="week-table"><table>
+<thead><tr><th scope="col">Date</th><th scope="col">Sunset</th><th scope="col">Golden hour starts</th></tr></thead>
+<tbody>${rows}</tbody>
+</table></div>
+<p class="week-pro">Want to know which of these evenings will actually be good? <a href="/pro">Pro sends a 7-day sunset quality outlook</a>.</p>
+</section>`;
+}
+
 function cityJsonLd({ base, canonical, city, score, description }) {
   const question = `Will tonight's sunset be good in ${city.city}?`;
   const ld = {
@@ -341,15 +381,18 @@ function cityHtml(env, city, score, variant = "") {
     : `Tonight's sunset in ${city.city}`;
   const shareHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(canonical)}`;
   const qa = cityQuickAnswers(city, score);
+  const week = score?.week?.days?.length ? score.week : null;
+  const described = describeWithWeek(description, week);
   return `<!doctype html><html lang="en"><head>${head({
     title: isTime ? (score ? `Sunset Time Today in ${city.city}: ${score.sunset} (${score.score}/10) · SunsetPing` : `Sunset Time Today in ${city.city} · SunsetPing`) : score ? cityPageTitle(city.city, score) : `${question} · SunsetPing`,
-    description,
+    description: described,
     canonical,
     image: `${base}/og/${city.slug}.png`,
     jsonLd: [
       cityJsonLd({ base, canonical, city, score, description }),
       qa.length ? faqPageJsonLd(qa) : null,
       breadcrumbJsonLd(base, city),
+      weekJsonLd(city, week),
     ],
   })}</head>
 <body><main class="wrap doc">
@@ -358,6 +401,7 @@ ${topbar()}
 <h1>${esc(question)}</h1>
 <p class="lede">${esc(city.tip)}</p>
 ${liveScoreHtml(city, score)}
+${weekTimesHtml(city, week)}
 ${quickAnswersHtml(city, qa)}
 <div class="tips">
 <section>
@@ -446,7 +490,15 @@ async function loadTonight(query, fetchImpl) {
   const presented = withZoneAbbrev(scored);
   if (!presented) return null;
   const dateModified = String(scored.sunsetIso || "").slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(dateModified) ? { ...presented, dateModified } : presented;
+  const withDate = /^\d{4}-\d{2}-\d{2}$/.test(dateModified) ? { ...presented, dateModified } : presented;
+  const week = weekSunsetTimes({
+    lat: scored.lat,
+    lon: scored.lon,
+    timeZone: scored.timezone,
+    startDate: dateModified,
+    forecastSunsetIso: scored.sunsetIso,
+  });
+  return week ? { ...withDate, week } : withDate;
 }
 
 async function loadTonightWithDeadline(query, ms) {

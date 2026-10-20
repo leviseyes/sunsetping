@@ -135,12 +135,20 @@ async function listSpots(env, subscriberId) {
 }
 
 // Preview fetchers must not open a Checkout Session. curl health checks and browsers still do.
+// ips-agent is the Verisign crawler ("Mozilla/5.0 (compatible; ips-agent)"). It has no
+// bot/crawler/spider token, and because it is not a browser it used to skip the interstitial.
 const CHECKOUT_CRAWLER_UA =
-  /googlebot|bingbot|crawler|spider|facebookexternalhit|slackbot|twitterbot|discordbot|whatsapp|preview|headless|(?:^|[^a-z])(?!cubot\b)[a-z]*bot\b/i;
+  /googlebot|bingbot|crawler|spider|facebookexternalhit|slackbot|twitterbot|discordbot|whatsapp|preview|headless|ips-agent|(?:^|[^a-z])(?!cubot\b)[a-z]*bot\b/i;
+const COMPATIBLE_CRAWLER = /\(compatible\s*;/i;
+const BROWSER_ENGINE = /applewebkit|chrome\/|crios\/|fxios\/|edgios\/|firefox\/|safari\/|edg\/|msie|trident/i;
 
 function isCheckoutPrefetch(req) {
   const purpose = `${req.headers.get("sec-purpose") || ""} ${req.headers.get("purpose") || ""}`;
   return /prefetch/i.test(purpose);
+}
+
+function isCompatibleCrawler(ua) {
+  return COMPATIBLE_CRAWLER.test(ua) && !BROWSER_ENGINE.test(ua);
 }
 
 function isCheckoutCrawler(req) {
@@ -149,9 +157,9 @@ function isCheckoutCrawler(req) {
   // WhatsApp/2.x is the link preview. The in-app browser also contains WhatsApp, plus a real engine.
   if (/whatsapp/i.test(ua) && /applewebkit|chrome|firefox/i.test(ua)) {
     const withoutClient = ua.replace(/whatsapp/gi, "");
-    if (!CHECKOUT_CRAWLER_UA.test(withoutClient)) return false;
+    if (!CHECKOUT_CRAWLER_UA.test(withoutClient) && !isCompatibleCrawler(withoutClient)) return false;
   }
-  return CHECKOUT_CRAWLER_UA.test(ua);
+  return CHECKOUT_CRAWLER_UA.test(ua) || isCompatibleCrawler(ua);
 }
 
 function stripeUrl(env, plan, email) {
