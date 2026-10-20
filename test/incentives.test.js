@@ -212,7 +212,9 @@ test("perks endpoint, photo page, cheat sheet, and early-access column", async (
     assert.doesNotMatch(html, /\$3\.99/);
     assert.doesNotMatch(html, /\/api\/checkout/);
   }
-  assert.equal(readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8").match(/MOSH_PDF_URL = "(.*)"/)[1], "");
+  const moshPdf = readFileSync(new URL("../public/downloads/mosh-planner.pdf", import.meta.url));
+  assert.equal(moshPdf.subarray(0, 5).toString(), "%PDF-");
+  assert.equal(readFileSync(new URL("../wrangler.toml", import.meta.url), "utf8").match(/MOSH_PDF_URL = "(.*)"/)[1], "/downloads/mosh-planner.pdf");
 });
 
 test("daily and weekly emails include the 7-day quality outlook for active subscribers", async () => {

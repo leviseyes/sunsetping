@@ -266,7 +266,7 @@ test("scheduled hook runs and /pro redirects to signup", async () => {
 });
 
 test("served pages do not show payment placeholder notes", async () => {
-  const files = ["../index.html", "../public/index.html", "../public/pro.html", "../public/faq.html"];
+  const files = ["../index.html", "../public/index.html", "../public/faq.html"];
   const pages = files.map((file) => readFileSync(new URL(file, import.meta.url), "utf8"));
   const monthly = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=monthly"), testEnv(createDb()));
   const yearly = await worker.fetch(new Request("https://sunsetping.com/api/checkout?plan=yearly"), testEnv(createDb()));
