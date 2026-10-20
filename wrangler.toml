@@ -16,7 +16,7 @@ account_id = "1a01a80affd778e3dc5812bbdcd5dc84"
 #   MOSH_PDF_URL                    — signup bonus PDF. Empty hides the bonus line.
 
 [vars]
-MOSH_PDF_URL = ""
+MOSH_PDF_URL = "/downloads/mosh-planner.pdf"
 
 [assets]
 directory = "./public"
