@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 import { runAlerts } from "../src/alerts.js";
 import { CITIES } from "../src/cities.js";
@@ -182,7 +182,7 @@ test("robots, llms.txt, and the FAQ state the product in plain language", async 
     assert.equal(answer, pair.a);
   }
   assert.doesNotMatch(`${faq}\n${llms}`, /Nothing is mailed unless an email provider key/);
-  for (const file of ["index.html", "pro.html", "faq.html", "llms.txt"]) {
+  for (const file of ["index.html", "faq.html", "llms.txt"]) {
     assert.doesNotMatch(readPublic(file), /payment link/i, file);
   }
   const routed = await worker.fetch(new Request("https://sunsetping.com/faq"), testEnv(createDb()));
@@ -211,10 +211,8 @@ test("homepage and pro page carry the requested structured data", () => {
   assert.doesNotMatch(home, /\/api\/checkout/);
   assert.doesNotMatch(home, /\$3\.99/);
   assert.doesNotMatch(home, /\$29/);
-  const pro = readPublic("pro.html");
-  assert.match(pro, /rel="canonical" href="https:\/\/sunsetping.com\/#signup"/);
-  assert.doesNotMatch(pro, /\$3\.99/);
-  assert.doesNotMatch(pro, /\$29/);
+  assert.equal(existsSync(new URL("../public/pro.html", import.meta.url)), false);
+  assert.equal(existsSync(new URL("../public/pro.js", import.meta.url)), false);
 });
 
 test("alert emails link a shareable forecast and do not upsell", () => {
