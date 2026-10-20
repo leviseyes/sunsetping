@@ -1,0 +1,3 @@
+# Prebuilt score cards. Same policy the worker sets when it serves /og/*.png.
+/og/*
+  Cache-Control: public, max-age=86400, s-maxage=86400

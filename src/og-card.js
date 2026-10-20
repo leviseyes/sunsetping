@@ -21,18 +21,20 @@ function flex(style, children) {
   return { type: "div", props: { style: { display: "flex", ...style }, children } };
 }
 
+const CARD_FRAME = {
+  width: `${WIDTH}px`,
+  height: `${HEIGHT}px`,
+  flexDirection: "column",
+  justifyContent: "space-between",
+  padding: "72px",
+  backgroundImage: "linear-gradient(160deg, #1c1612 0%, #7a3418 46%, #e8a15a 100%)",
+  color: "#fff",
+  fontFamily: "Instrument Sans",
+};
+
 export function scoreCardNode(card) {
   const model = cardModel(card);
-  return flex({
-    width: `${WIDTH}px`,
-    height: `${HEIGHT}px`,
-    flexDirection: "column",
-    justifyContent: "space-between",
-    padding: "72px",
-    backgroundImage: "linear-gradient(160deg, #1c1612 0%, #7a3418 46%, #e8a15a 100%)",
-    color: "#fff",
-    fontFamily: "Instrument Sans",
-  }, [
+  return flex(CARD_FRAME, [
     flex({ fontSize: "32px", fontWeight: 600, letterSpacing: "0.22em" }, "SUNSETPING"),
     flex({ flexDirection: "column" }, [
       flex({ fontSize: "72px", fontWeight: 600 }, model.city),
@@ -41,6 +43,20 @@ export function scoreCardNode(card) {
         flex({ fontSize: "48px", marginBottom: "22px", marginLeft: "10px" }, "/10"),
       ]),
       flex({ fontSize: "36px", marginTop: "18px" }, model.line || "Tonight's sunset"),
+    ]),
+  ]);
+}
+
+/**
+ * Static brand card for /og/<slug>.png. Same frame as the live score card.
+ * The live number is left off so a prebuilt image never shows a stale score.
+ */
+export function cityBrandCardNode(city) {
+  return flex(CARD_FRAME, [
+    flex({ fontSize: "32px", fontWeight: 600, letterSpacing: "0.22em" }, "SUNSETPING"),
+    flex({ flexDirection: "column" }, [
+      flex({ fontSize: "108px", fontWeight: 600, lineHeight: 1.05 }, String(city || "Tonight")),
+      flex({ fontSize: "36px", marginTop: "28px", color: "#fff7ed" }, "Tonight's sunset score"),
     ]),
   ]);
 }
@@ -69,7 +85,7 @@ async function startEngine(modules) {
   await initWasm(modules.resvgWasm);
 }
 
-export async function renderScorePng(card, modules) {
+async function rasterize(node, modules) {
   if (!engineReady) {
     engineReady = startEngine(modules).catch((err) => {
       engineReady = null;
@@ -77,7 +93,7 @@ export async function renderScorePng(card, modules) {
     });
   }
   await engineReady;
-  const svg = await satori(scoreCardNode(card), {
+  const svg = await satori(node, {
     width: WIDTH,
     height: HEIGHT,
     fonts: [
@@ -86,6 +102,14 @@ export async function renderScorePng(card, modules) {
     ],
   });
   return new Resvg(svg).render().asPng();
+}
+
+export async function renderScorePng(card, modules) {
+  return rasterize(scoreCardNode(card), modules);
+}
+
+export async function renderCityBrandPng(city, modules) {
+  return rasterize(cityBrandCardNode(city), modules);
 }
 
 export async function renderOgResponse(card, { live = false } = {}) {
