@@ -688,7 +688,7 @@ function cityCacheRequest(requestUrl, slug, variant = "") {
   if (variant === "time") key.pathname = `/sunset-time/${slug}`;
   else if (variant === "golden") key.pathname = `/golden-hour/${slug}`;
   else key.pathname = `/sunset/${slug}`;
-  key.search = "";
+  key.search = `?og=${OG_CARD_VERSION}`; // new meta/card version => fresh cache entry on deploy
   key.hash = "";
   return new Request(key.toString(), { method: "GET" });
 }
