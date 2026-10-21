@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { CITIES } from "../src/cities.js";
 import { welcomePage } from "../src/pages.js";
 import worker from "../src/worker.js";
 import { CLEAR, PERFECT, WASHED, createDb, day, flatForecast, geocodeBody, testEnv, withFetch } from "./fixtures.js";
@@ -83,6 +84,49 @@ test("GET /api/score accepts lat/lon and ZIP codes", async () => {
     assert.equal(coord.location, "Santa Fe, New Mexico");
     assert.equal(coord.lat, 35.68);
     assert.equal(coord.lon, -105.94);
+  });
+});
+
+test("GET /api/score resolves every catalog city slug", async () => {
+  let denverName = "";
+  await withFetch(async (url) => {
+    const u = String(url);
+    if (u.includes("geocoding-api")) {
+      const name = new URL(u).searchParams.get("name") || "";
+      if (name === "Denver") {
+        denverName = name;
+        return Response.json(geocodeBody());
+      }
+      const city = CITIES.find((item) => item.query === name);
+      if (!city) return Response.json({ results: [] });
+      return Response.json(geocodeBody({
+        name: city.city,
+        admin1: city.region,
+        latitude: 39.5,
+        longitude: -104.9,
+        timezone: "America/Denver",
+      }));
+    }
+    if (u.includes("api.open-meteo.com")) return Response.json(forecastFor(PERFECT));
+    if (u.includes("zippopotam")) return new Response("missing", { status: 404 });
+    throw new Error("unexpected fetch " + u);
+  }, async () => {
+    const env = testEnv(createDb());
+    const named = await worker.fetch(new Request("https://sunsetping.com/api/score?q=Denver"), env);
+    assert.equal(named.status, 200);
+    assert.equal(denverName, "Denver");
+    assert.equal((await named.json()).location, "Denver, Colorado");
+    const byCoord = await worker.fetch(new Request("https://sunsetping.com/api/score?lat=35.68&lon=-105.94"), env);
+    assert.equal(byCoord.status, 200);
+
+    for (const city of CITIES) {
+      const res = await worker.fetch(new Request(`https://sunsetping.com/api/score?q=${encodeURIComponent(city.slug)}`), env);
+      assert.equal(res.status, 200, city.slug);
+      const body = await res.json();
+      assert.equal(body.location, `${city.city}, ${city.region}`, city.slug);
+      assert.equal(typeof body.score, "number", city.slug);
+      assert.ok(body.viewing?.goldenHourStart, city.slug);
+    }
   });
 });
 

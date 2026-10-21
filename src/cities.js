@@ -73,6 +73,19 @@ export function cityBySlug(slug) {
   return bySlug.get(String(slug || "").toLowerCase()) || null;
 }
 
+/**
+ * Catalog slugs (`washington-dc`, `cape-cod`) are not place names.
+ * Map an exact slug to the query the city page already geocodes.
+ * Ordinary names such as "Denver" stay unchanged.
+ */
+export function queryForCatalogSlug(q) {
+  const raw = String(q || "").trim();
+  const city = cityBySlug(raw);
+  if (!city || raw.toLowerCase() !== city.slug) return raw;
+  if (raw === city.slug || raw.includes("-")) return city.query;
+  return raw;
+}
+
 export function nearbyCities(city) {
   return (city?.nearby || []).map((slug) => bySlug.get(slug)).filter(Boolean);
 }

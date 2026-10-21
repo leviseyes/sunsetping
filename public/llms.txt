@@ -46,3 +46,11 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 City page pattern: https://sunsetping.com/sunset/<city-slug>
 Sunset time pattern: https://sunsetping.com/sunset-time/<city-slug>
 Share-a-forecast pattern: https://sunsetping.com/s/<place>
+
+## Golden hour
+
+Evening golden hour for landscape photographers. Each page has tonight's golden hour start and end in local time, blue hour start and end, tonight's sunset score, a 7-day golden hour table, and places to shoot. The week table is clock times. Do not invent a score. The score printed on the page is tonight's forecast.
+
+- [Golden hour index](https://sunsetping.com/golden-hour): all 65 cities
+- [Example](https://sunsetping.com/golden-hour/sedona): golden hour today in Sedona
+- Pattern: https://sunsetping.com/golden-hour/<city-slug>
