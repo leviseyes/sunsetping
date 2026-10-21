@@ -1,3 +1,4 @@
+import { queryForCatalogSlug } from "./cities.js";
 import { rankScores, scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
 import { MAX_SPOTS, runAlerts } from "./alerts.js";
@@ -163,7 +164,9 @@ async function handleApi(req, url, env, ctx) {
 
   if (url.pathname === "/api/score") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
-    const result = await scoreQuery(inputFromUrl(url), 1);
+    const input = inputFromUrl(url);
+    if (typeof input.q === "string") input.q = queryForCatalogSlug(input.q);
+    const result = await scoreQuery(input, 1);
     return json(publicDay(result.days[0]), 200, { "cache-control": "public, max-age=600" });
   }
 
@@ -355,7 +358,7 @@ export default {
     } catch (err) {
       const status = err instanceof HttpError ? err.status : Number.isInteger(err?.status) ? err.status : 0;
       const cityPath = url.pathname.replace(/\/$/, "") || "/";
-      if (cityPath.startsWith("/sunset/")) {
+      if (cityPath.startsWith("/sunset/") || cityPath.startsWith("/golden-hour/")) {
         console.log(JSON.stringify({ event: "city_page_error", path: url.pathname, message: String(err?.message || err) }));
         try {
           const fallback = await growthRoute(url, env, ctx, { skipScore: true });
@@ -363,7 +366,8 @@ export default {
         } catch (inner) {
           console.log(JSON.stringify({ event: "city_page_fallback_error", path: url.pathname, message: String(inner?.message || inner) }));
         }
-        return simplePage("Tonight's sunset", "The forecast will be back shortly.", 200);
+        const label = cityPath.startsWith("/golden-hour/") ? "Golden hour" : "Tonight's sunset";
+        return simplePage(label, "The forecast will be back shortly.", 200);
       }
       if (status) {
         if (url.pathname.startsWith("/api/")) return json({ error: err.message }, status);

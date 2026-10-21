@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { inflateSync } from "node:zlib";
 import { CITIES } from "../src/cities.js";
 import { OG_CARD_CACHE, OG_CARD_VERSION } from "../src/growth.js";
-import { recompressPng } from "../scripts/build-og-cards.mjs";
 import { cardModel, cityBrandCardNode, renderCityBrandPng, renderScorePng, scoreCardSvg } from "../src/og-card.js";
 import worker from "../src/worker.js";
 import { createDb, testEnv, withFetch } from "./fixtures.js";
@@ -128,11 +128,34 @@ const ogModules = {
   semibold: readFileSync(new URL("../src/fonts/InstrumentSans-Semibold.ttf", import.meta.url)),
 };
 
+/**
+ * IHDR plus the inflated IDAT scanlines.
+ * zlib's level-9 stream differs across Node builds; the pixels do not.
+ */
+function pngImageBytes(png) {
+  const buf = Buffer.from(png);
+  if (buf.length < 8 || buf[0] !== 0x89) throw new Error("not a png");
+  let offset = 8;
+  let ihdr = null;
+  const idat = [];
+  while (offset + 12 <= buf.length) {
+    const len = buf.readUInt32BE(offset);
+    const type = buf.subarray(offset + 4, offset + 8).toString("ascii");
+    const data = buf.subarray(offset + 8, offset + 8 + len);
+    if (type === "IHDR") ihdr = Buffer.from(data);
+    else if (type === "IDAT") idat.push(data);
+    offset += 12 + len;
+  }
+  if (!ihdr) throw new Error("png missing IHDR");
+  if (!idat.length) throw new Error("png missing IDAT");
+  return Buffer.concat([ihdr, inflateSync(Buffer.concat(idat))]);
+}
+
 test("prebuilt OG cards match the score-free brand render", async () => {
   for (const city of CITIES) {
-    const png = recompressPng(await renderCityBrandPng(city.city, ogModules));
-    const file = readFileSync(new URL(`../public/og/${city.slug}.png`, import.meta.url));
-    assert.equal(Buffer.compare(Buffer.from(png), file), 0, `${city.slug}.png is not the score-free brand card`);
+    const rendered = pngImageBytes(await renderCityBrandPng(city.city, ogModules));
+    const file = pngImageBytes(readFileSync(new URL(`../public/og/${city.slug}.png`, import.meta.url)));
+    assert.equal(Buffer.compare(rendered, file), 0, `${city.slug}.png is not the score-free brand card`);
   }
   const saltLake = JSON.stringify(cityBrandCardNode("Salt Lake City"));
   assert.match(saltLake, /Salt Lake City/);

@@ -158,10 +158,10 @@ export function cityMetaDescription(cityName, score) {
   return `Sunset time today in ${cityName} is ${score.sunset}${tz}. Tonight's SunsetPing score is ${score.score}/10: ${score.verdict}.`;
 }
 
-function describeWithWeek(description, week) {
+function describeWithWeek(description, week, weekSentence = "Sunset times for the next 7 days are listed on this page.") {
   const alert = " Free sunset and golden-hour quality alerts for landscape photographers.";
   if (!week?.days?.length) return `${description}${alert}`;
-  return `${description} Sunset times for the next 7 days are listed on this page.${alert}`;
+  return `${description} ${weekSentence}${alert}`;
 }
 
 /** Calendar date used as sitemap <lastmod> for city pages. US Pacific, so it stays "today" through the evening. */
@@ -342,10 +342,11 @@ function breadcrumbJsonLd(base, city) {
   };
 }
 
-function quickAnswersHtml(city, qa) {
+function quickAnswersHtml(city, qa, heading) {
   if (!qa.length) return "";
+  const title = heading || `Sunset in ${city.city} — quick answers`;
   const body = qa.map((item) => `<h3>${esc(item.q)}</h3><p>${esc(item.a)}</p>`).join("");
-  return `<section class="city-qa" aria-label="${esc(`Sunset in ${city.city} — quick answers`)}"><h2>Sunset in ${esc(city.city)} — quick answers</h2>${body}</section>`;
+  return `<section class="city-qa" aria-label="${esc(title)}"><h2>${esc(title)}</h2>${body}</section>`;
 }
 
 function weekJsonLd(city, week) {
@@ -413,6 +414,196 @@ function liveScoreHtml(city, score) {
 </section>`;
 }
 
+/** "5:42 PM" + "6:42 PM" → "5:42–6:42 PM". Same meridian rule as compactClockRange. */
+function enDashRange(start, end) {
+  return compactClockRange(start, end).replace("-", "\u2013");
+}
+
+function goldenHourPhrase(city, score) {
+  const viewing = score?.viewing || {};
+  if (!viewing.goldenHourStart || !viewing.goldenHourEnd) return `Golden Hour Today in ${city.city}`;
+  const tz = score.tz ? ` ${score.tz}` : "";
+  return `Golden Hour Today in ${city.city}: ${enDashRange(viewing.goldenHourStart, viewing.goldenHourEnd)}${tz}`;
+}
+
+/** Visible Q&A for a golden-hour page. Time and score answers are omitted when the forecast failed. */
+function goldenQuickAnswers(city, score) {
+  const name = city.city;
+  const qa = [];
+  const viewing = score?.viewing || {};
+  const tz = score?.tz ? ` ${score.tz}` : "";
+  const when = score?.date ? ` today (${score.date})` : " today";
+  if (viewing.goldenHourStart && viewing.goldenHourEnd) {
+    qa.push({
+      q: `When is golden hour today in ${name}?`,
+      a: `Evening golden hour in ${name}${when} is ${enDashRange(viewing.goldenHourStart, viewing.goldenHourEnd)}${tz}.`,
+    });
+    if (viewing.blueHourEnd) {
+      qa.push({
+        q: `When is blue hour today in ${name}?`,
+        a: `Blue hour in ${name}${when} is ${enDashRange(viewing.goldenHourEnd, viewing.blueHourEnd)}${tz}.`,
+      });
+    }
+  }
+  if (score?.score != null && score.score !== "" && score?.verdict) {
+    const reason = score.reason ? ` ${score.reason}` : "";
+    qa.push({
+      q: `Is tonight a good sunset for photos in ${name}?`,
+      a: `Tonight's sunset score in ${name} is ${score.score}/10: ${score.verdict}.${reason}`,
+    });
+  }
+  if (Array.isArray(city.spots) && city.spots.length) {
+    const tip = city.tip ? ` ${city.tip}` : "";
+    qa.push({
+      q: `Where to shoot golden hour in ${name}?`,
+      a: `Top photo spots in ${name}: ${joinSpots(city.spots)}.${tip}`,
+    });
+  }
+  return qa;
+}
+
+function goldenDescription(city, score) {
+  const viewing = score?.viewing || {};
+  if (viewing.goldenHourStart && viewing.goldenHourEnd && score?.score != null && score.score !== "") {
+    const tz = score.tz ? ` ${score.tz}` : "";
+    const verdict = score.verdict ? `: ${score.verdict}` : "";
+    return `Golden hour today in ${city.city} is ${enDashRange(viewing.goldenHourStart, viewing.goldenHourEnd)}${tz}. Tonight's sunset score is ${score.score}/10${verdict}.`;
+  }
+  return `Golden hour today in ${city.city}, ${city.region}. Evening golden hour and blue hour, tonight's sunset score, and where to shoot.`;
+}
+
+function goldenCrumbJsonLd(base, city) {
+  const itemListElement = [
+    { "@type": "ListItem", position: 1, name: "Home", item: `${base}/` },
+    { "@type": "ListItem", position: 2, name: "Golden hour", item: `${base}/golden-hour` },
+  ];
+  if (city) {
+    itemListElement.push({ "@type": "ListItem", position: 3, name: city.city, item: `${base}/golden-hour/${city.slug}` });
+  }
+  return { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement };
+}
+
+function relatedCityLinks(city, variant) {
+  const sunset = `<a href="/sunset/${esc(city.slug)}">Will tonight's sunset be good in ${esc(city.city)}?</a>`;
+  const time = `<a href="/sunset-time/${esc(city.slug)}">Sunset time today in ${esc(city.city)}</a>`;
+  const golden = `<a href="/golden-hour/${esc(city.slug)}">Golden hour today in ${esc(city.city)}</a>`;
+  if (variant === "golden") return `${sunset} ${time}`;
+  if (variant === "time") return `${sunset} ${golden}`;
+  return `${time} ${golden}`;
+}
+
+function goldenFactsHtml(city, score, qa) {
+  if (!score) {
+    return `<section class="city-live" aria-live="polite">
+<p class="status">Checking tonight's sky in ${esc(city.city)}…</p>
+</section>`;
+  }
+  const golden = qa.find((item) => item.q.startsWith("When is golden hour"));
+  const blue = qa.find((item) => item.q.startsWith("When is blue hour"));
+  return `<section class="city-live" aria-live="polite">
+${golden ? `<p class="city-fact">${esc(golden.a)}</p>` : ""}
+${blue ? `<p>${esc(blue.a)}</p>` : ""}
+<p class="city-score"><strong>${esc(score.score)}/10</strong> ${esc(score.verdict || "")}</p>
+<p>${esc(score.reason || "")}</p>
+</section>`;
+}
+
+function goldenWeekHtml(city, week) {
+  if (!week?.days?.length) return "";
+  const where = week.sameTz ? `${week.sameTz}, ${week.timeZone}` : week.timeZone;
+  const rows = week.days.map((day) => {
+    const range = enDashRange(day.goldenHourStart, day.sunset);
+    return `<tr><td><time datetime="${esc(day.date)}">${esc(day.shortLabel)}</time></td><td>${esc(range)} ${esc(day.tz)}</td><td>${esc(day.sunset)} ${esc(day.tz)}</td></tr>`;
+  }).join("");
+  return `<section class="week-times" id="golden-week" aria-labelledby="golden-week-title">
+<h2 id="golden-week-title">Golden hour this week in ${esc(city.city)}</h2>
+<p class="week-note">Local time (${esc(where)}). Golden hour ends at sunset.</p>
+<div class="week-table"><table>
+<thead><tr><th scope="col">Date</th><th scope="col">Golden hour</th><th scope="col">Sunset</th></tr></thead>
+<tbody>${rows}</tbody>
+</table></div>
+<p class="week-cta">${esc(OUTLOOK_CTA)}. <a href="#signup">Get free sunset and golden-hour alerts</a>.</p>
+</section>`;
+}
+
+function goldenHtml(env, city, score) {
+  const base = origin(env);
+  const canonical = `${base}/golden-hour/${city.slug}`;
+  const phrase = goldenHourPhrase(city, score);
+  const description = goldenDescription(city, score);
+  const nearby = nearbyCities(city).map((other) =>
+    `<a href="/golden-hour/${esc(other.slug)}">${esc(other.city)}</a>`
+  ).join("");
+  const spots = city.spots.map((spot) => `<li>${esc(spot)}</li>`).join("");
+  const qa = goldenQuickAnswers(city, score);
+  const week = score?.week?.days?.length ? score.week : null;
+  const described = describeWithWeek(description, week, "Golden hour for the next 7 days is listed on this page.");
+  const pageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: phrase,
+    url: canonical,
+    description: described,
+    isPartOf: { "@type": "WebSite", name: "SunsetPing", url: `${base}/` },
+    about: { "@type": "Place", name: `${city.city}, ${city.region}` },
+  };
+  if (score?.dateModified && /^\d{4}-\d{2}-\d{2}$/.test(score.dateModified)) pageLd.dateModified = score.dateModified;
+  return `<!doctype html><html lang="en"><head>${head({
+    title: `${phrase} · SunsetPing`,
+    description: described,
+    canonical,
+    image: `${base}/og/${city.slug}.png?v=${OG_CARD_VERSION}`,
+    jsonLd: [
+      pageLd,
+      qa.length ? faqPageJsonLd(qa) : null,
+      goldenCrumbJsonLd(base, city),
+    ],
+  })}</head>
+<body><main class="wrap doc">
+${topbar()}
+<p class="kicker">${esc(city.region)}</p>
+<h1>${esc(phrase)}</h1>
+<p class="lede">${esc(city.tip)}</p>
+${goldenFactsHtml(city, score, qa)}
+${goldenWeekHtml(city, week)}
+${quickAnswersHtml(city, qa, `Golden hour in ${city.city} — quick answers`)}
+<div class="tips">
+<section>
+<h2>Where to shoot golden hour in ${esc(city.city)}</h2>
+<ul>${spots}</ul>
+</section>
+${inlineSignup(city.query, Boolean(moshPdfUrl(env)))}
+</div>
+<nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/golden-hour">All cities</a></nav>
+<p>${relatedCityLinks(city, "golden")}</p>
+</main>${footer(city.query, Boolean(moshPdfUrl(env)))}${stickySignup(city.query, Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script></body></html>`;
+}
+
+export function goldenHourIndex(env) {
+  const base = origin(env);
+  const canonical = `${base}/golden-hour`;
+  const title = `Golden hour times for ${CITIES.length} cities`;
+  const description = "Evening golden hour and blue hour for Sedona, Malibu, Key West, Maui, Big Sur, and other cities landscape photographers shoot.";
+  const cards = [...CITIES].sort((a, b) => a.city.localeCompare(b.city)).map((city) =>
+    `<a href="/golden-hour/${esc(city.slug)}"><strong>${esc(city.city)}</strong><span>${esc(city.region)}</span></a>`
+  ).join("");
+  const html = `<!doctype html><html lang="en"><head>${head({
+    title: `${title} · SunsetPing`,
+    description,
+    canonical,
+    jsonLd: goldenCrumbJsonLd(base, null),
+  })}</head>
+<body><main class="wrap doc">
+${topbar()}
+<p class="kicker">Golden hour</p>
+<h1>Golden hour today, for ${CITIES.length} cities</h1>
+<p class="lede">Each page has tonight's golden hour and blue hour, the sunset score, a week of golden-hour times, and places to stand.</p>
+<nav class="city-list" aria-label="Golden hour cities">${cards}</nav>
+${inlineSignup("", Boolean(moshPdfUrl(env)))}
+</main>${footer("", Boolean(moshPdfUrl(env)))}${stickySignup("", Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script></body></html>`;
+  return htmlResponse(html);
+}
+
 function cityHtml(env, city, score, variant = "") {
   const base = origin(env);
   const isTime = variant === "time";
@@ -470,7 +661,7 @@ ${quickAnswersHtml(city, qa)}
 ${inlineSignup(city.query, Boolean(moshPdfUrl(env)))}
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/sunset">All cities</a></nav>
-<p>${isTime ? `<a href="/sunset/${esc(city.slug)}">Will tonight's sunset be good in ${esc(city.city)}?</a>` : `<a href="/sunset-time/${esc(city.slug)}">Sunset time today in ${esc(city.city)}</a>`}</p>
+<p>${relatedCityLinks(city, isTime ? "time" : "")}</p>
 </main>${footer(city.query, Boolean(moshPdfUrl(env)))}${stickySignup(city.query, Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
 }
 
@@ -493,7 +684,9 @@ function edgeCache() {
 
 function cityCacheRequest(requestUrl, slug, variant = "") {
   const key = new URL(requestUrl instanceof URL ? requestUrl.href : String(requestUrl));
-  key.pathname = variant === "time" ? `/sunset-time/${slug}` : `/sunset/${slug}`;
+  if (variant === "time") key.pathname = `/sunset-time/${slug}`;
+  else if (variant === "golden") key.pathname = `/golden-hour/${slug}`;
+  else key.pathname = `/sunset/${slug}`;
   key.search = "";
   key.hash = "";
   return new Request(key.toString(), { method: "GET" });
@@ -590,7 +783,8 @@ export async function sunsetCity(env, slug, options = {}) {
         score = null;
       }
     }
-    const response = cityResponse(cityHtml(env, city, score, options.variant), score);
+    const html = options.variant === "golden" ? goldenHtml(env, city, score) : cityHtml(env, city, score, options.variant);
+    const response = cityResponse(html, score);
     if (score && cache && cacheKey) {
       try {
         await remember(options.ctx, cache.put(cacheKey, response.clone()));
@@ -601,7 +795,8 @@ export async function sunsetCity(env, slug, options = {}) {
     return response;
   } catch (err) {
     console.log(JSON.stringify({ event: "city_score_fallback", slug: city.slug, message: String(err?.message || err) }));
-    return cityResponse(cityHtml(env, city, null, options.variant), null);
+    const html = options.variant === "golden" ? goldenHtml(env, city, null) : cityHtml(env, city, null, options.variant);
+    return cityResponse(html, null);
   }
 }
 
@@ -617,10 +812,20 @@ export function indexNowKeyResponse() {
 export function sitemapXml(env) {
   const base = origin(env);
   const lastmod = citySitemapLastmod();
-  const urls = ["/", "/faq", "/photo-of-the-month", "/sunset", ...CITIES.map((city) => `/sunset/${city.slug}`), ...CITIES.map((city) => `/sunset-time/${city.slug}`)];
+  const urls = [
+    "/",
+    "/faq",
+    "/photo-of-the-month",
+    "/sunset",
+    "/golden-hour",
+    ...CITIES.map((city) => `/sunset/${city.slug}`),
+    ...CITIES.map((city) => `/sunset-time/${city.slug}`),
+    ...CITIES.map((city) => `/golden-hour/${city.slug}`),
+  ];
   const body = urls.map((path) => {
     const loc = `${base}${path}`;
-    if (path === "/sunset" || path.startsWith("/sunset/") || path.startsWith("/sunset-time/")) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;
+    const dated = path === "/sunset" || path === "/golden-hour" || path.startsWith("/sunset/") || path.startsWith("/sunset-time/") || path.startsWith("/golden-hour/");
+    if (dated) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;
     return `  <url><loc>${loc}</loc></url>`;
   }).join("\n");
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
@@ -668,6 +873,12 @@ export async function growthRoute(url, env, ctx, options = {}) {
     const slug = decodeURIComponent(path.slice("/sunset-time/".length));
     if (!slug || slug.includes("/")) return simplePage("No city page", "That sunset city isn't in the guide. Try the city index.", 404);
     return sunsetCity(env, slug, { ctx, requestUrl: url, skipScore: options.skipScore === true, variant: "time" });
+  }
+  if (path === "/golden-hour") return goldenHourIndex(env);
+  if (path.startsWith("/golden-hour/")) {
+    const slug = decodeURIComponent(path.slice("/golden-hour/".length));
+    if (!slug || slug.includes("/")) return simplePage("No city page", "That sunset city isn't in the guide. Try the city index.", 404);
+    return sunsetCity(env, slug, { ctx, requestUrl: url, skipScore: options.skipScore === true, variant: "golden" });
   }
   return null;
 }
