@@ -2,6 +2,7 @@ import { CITIES, cityBySlug, nearbyCities } from "./cities.js";
 import { INDEXNOW_KEY } from "./indexnow.js";
 import { fetchForecast, resolvePlace } from "./openmeteo.js";
 import { simplePage } from "./pages.js";
+import { socialText } from "./social.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { weekSunsetTimes } from "./sun.js";
 import { OUTLOOK_CTA, greatNightsField, moshPdfUrl, perkListHtml } from "./signup.js";
@@ -19,7 +20,7 @@ export const OG_CARD_CACHE = "public, max-age=86400, s-maxage=86400";
  * Bump when public/og/*.png changes. X caches the image by URL, so a card
  * unfurled earlier stays on the old picture until this query string changes.
  */
-export const OG_CARD_VERSION = "2";
+export const OG_CARD_VERSION = "3";
 const CITY_SCORE_TIMEOUT_MS = 8000;
 const FALLBACK_CACHE = "public, max-age=60";
 
@@ -52,14 +53,14 @@ function head({ title, description, canonical, jsonLd, image }) {
 <link rel="canonical" href="${esc(canonical)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SunsetPing">
-<meta property="og:title" content="${esc(title)}">
-<meta property="og:description" content="${esc(description)}">
+<meta property="og:title" content="${esc(socialText(title))}">
+<meta property="og:description" content="${esc(socialText(description))}">
 <meta property="og:url" content="${esc(canonical)}">
 <meta property="og:image" content="${esc(ogImage)}">
 ${imageMeta}
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${esc(title)}">
-<meta name="twitter:description" content="${esc(description)}">
+<meta name="twitter:title" content="${esc(socialText(title))}">
+<meta name="twitter:description" content="${esc(socialText(description))}">
 <meta name="twitter:image" content="${esc(ogImage)}">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
