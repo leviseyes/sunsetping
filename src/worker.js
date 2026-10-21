@@ -346,12 +346,8 @@ export default {
         const result = await scoreQuery({ q }, 1);
         const day = publicDay(result.days[0]);
         const canonical = new URL(`/s/${encodeURIComponent(day.location)}`, url.origin).toString();
-        const image = new URL("/api/og.svg", url.origin);
-        image.searchParams.set("score", String(day.score));
-        image.searchParams.set("location", day.location);
-        image.searchParams.set("verdict", day.verdict);
-        image.searchParams.set("sunset", day.sunset);
-        image.searchParams.set("date", day.date);
+        // Score-free image: unfurlers cache cards for days, so never bake the score in.
+        const image = new URL("/images/hero-sunset.jpg", url.origin);
         return sharePage({ score: day, canonical, image: image.toString(), showMosh: Boolean(moshPdfUrl(env)) });
       }
       return env.ASSETS.fetch(req);

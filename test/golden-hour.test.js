@@ -85,7 +85,8 @@ function assertGoldenPage(html, city, spec) {
   assert.match(html, new RegExp(`<title>${spec.phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} · SunsetPing</title>`));
   assert.match(html, new RegExp(`<h1>${spec.phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}</h1>`));
   assert.match(html, new RegExp(`rel="canonical" href="https://sunsetping.com/golden-hour/${city.slug}"`));
-  assert.match(html, new RegExp(`property="og:image" content="https://sunsetping.com/og/${city.slug}.png\\?v=2"`));
+  assert.match(html, new RegExp(`property="og:image" content="https://sunsetping.com/og/${city.slug}.png\\?v=3"`));
+  assert.doesNotMatch(html, /(property|name)="(og|twitter):[^"]*" content="[^"]*\d+\/10/);
   assert.match(html, /property="og:title"/);
   assert.match(html, /name="description"/);
   assert.match(html, /Golden hour for the next 7 days is listed on this page/);

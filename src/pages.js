@@ -65,22 +65,24 @@ ${sharePath ? `<p class="share-row"><a class="share-url" href="${esc(sharePath)}
 export function sharePage({ score, canonical, image, showMosh = false }) {
   const title = `Tonight's sunset in ${score.location}: ${score.score}/10 — ${score.verdict}`;
   const description = `${score.reason} Sunset at ${score.sunset}${score.tz ? " " + score.tz : ""}.`;
+  const socialTitle = `Tonight's sunset in ${score.location} · SunsetPing`;
+  const socialDescription = `Sunset at ${score.sunset}${score.tz ? " " + score.tz : ""}. Open for tonight's live sunset score. Free sunset alerts for landscape photographers.`;
   const html = `<!doctype html><html lang="en"><head>${SHELL_HEAD}
 <title>${esc(title)}</title>
 <meta name="description" content="${esc(description)}">
 <link rel="canonical" href="${esc(canonical)}">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="SunsetPing">
-<meta property="og:title" content="${esc(title)}">
-<meta property="og:description" content="${esc(description)}">
+<meta property="og:title" content="${esc(socialTitle)}">
+<meta property="og:description" content="${esc(socialDescription)}">
 <meta property="og:url" content="${esc(canonical)}">
 <meta property="og:image" content="${esc(image)}">
-<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:type" content="image/jpeg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${esc(title)}">
-<meta name="twitter:description" content="${esc(description)}">
+<meta name="twitter:title" content="${esc(socialTitle)}">
+<meta name="twitter:description" content="${esc(socialDescription)}">
 <meta name="twitter:image" content="${esc(image)}">
 </head><body class="share">
 ${topbar()}

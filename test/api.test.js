@@ -195,7 +195,9 @@ test("share pages carry Open Graph tags and /lookup redirects", async () => {
     const page = await worker.fetch(new Request("https://sunsetping.com/s/Denver"), testEnv(createDb()));
     const html = await page.text();
     assert.equal(page.status, 200);
-    assert.match(html, /property="og:title" content="Tonight&#39;s sunset in Denver, Colorado: 10\/10 — Don&#39;t miss it"/);
+    assert.match(html, /property="og:title" content="Tonight&#39;s sunset in Denver, Colorado · SunsetPing"/);
+    assert.doesNotMatch(html, /property="(og|twitter):[^"]*" content="[^"]*\d+\/10/);
+    assert.match(html, /property="og:image" content="https:\/\/sunsetping.com\/images\/hero-sunset.jpg"/);
     assert.match(html, /property="og:image"/);
     assert.match(html, /twitter:card" content="summary_large_image"/);
     assert.match(html, /Golden hour start/);
