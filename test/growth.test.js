@@ -117,20 +117,22 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
   for (const city of CITIES) assert.match(xml, new RegExp(`<loc>https://sunsetping.com/golden-hour/${city.slug}</loc>`));
   assert.match(xml, /<loc>https:\/\/sunsetping\.com\/golden-hour<\/loc>/);
   assert.match(xml, /<loc>https:\/\/sunsetping\.com\/photo-of-the-month<\/loc>/);
-  assert.equal(xml.match(/<loc>/g).length, 5 + CITIES.length * 3);
+  assert.match(xml, /<loc>https:\/\/sunsetping\.com\/tonight<\/loc>/);
+  assert.equal(xml.match(/<loc>/g).length, 6 + CITIES.length * 3);
   const lastmod = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length * 3 + 2);
+  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length * 3 + 3);
   for (const city of CITIES) {
     assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc><lastmod>${lastmod}</lastmod>`));
     assert.match(xml, new RegExp(`<loc>https://sunsetping.com/golden-hour/${city.slug}</loc><lastmod>${lastmod}</lastmod>`));
   }
   assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset</loc><lastmod>${lastmod}</lastmod>`));
   assert.match(xml, new RegExp(`<loc>https://sunsetping.com/golden-hour</loc><lastmod>${lastmod}</lastmod>`));
+  assert.match(xml, new RegExp(`<loc>https://sunsetping.com/tonight</loc><lastmod>${lastmod}</lastmod>`));
   assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/<\/loc><lastmod>/);
   assert.doesNotMatch(xml, /sunsetping\.com\/pro/);
   assert.doesNotMatch(xml, /<loc>https:\/\/sunsetping.com\/faq<\/loc><lastmod>/);

@@ -117,9 +117,14 @@ export async function resolvePlace(input, fetchImpl = fetch) {
 }
 
 export function forecastUrl(lat, lon, days) {
+  return forecastPointsUrl([{ lat, lon }], days);
+}
+
+/** Open-Meteo accepts comma-separated latitude and longitude lists and returns one object per point, in order. */
+export function forecastPointsUrl(points, days) {
   const u = new URL(FORECAST);
-  u.searchParams.set("latitude", String(lat));
-  u.searchParams.set("longitude", String(lon));
+  u.searchParams.set("latitude", points.map((p) => p.lat).join(","));
+  u.searchParams.set("longitude", points.map((p) => p.lon).join(","));
   u.searchParams.set("timezone", "auto");
   u.searchParams.set("forecast_days", String(days));
   u.searchParams.set("daily", "sunset,sunrise");
@@ -127,10 +132,26 @@ export function forecastUrl(lat, lon, days) {
   return u.toString();
 }
 
+function usableForecast(data) {
+  return Boolean(data?.daily?.sunset && data?.hourly?.time);
+}
+
 export async function fetchForecast(lat, lon, days, fetchImpl = fetch) {
   const data = await getJson(forecastUrl(lat, lon, days), fetchImpl);
-  if (!data.daily?.sunset || !data.hourly?.time) {
+  if (!usableForecast(data)) {
     throw new HttpError(502, "Sunset forecast is temporarily unavailable.");
   }
   return data;
+}
+
+/**
+ * One forecast request for many coordinates.
+ * A single location comes back as an object; several come back as an array in request order.
+ * Entries that lack sunset or hourly data are null so the caller can skip those cities.
+ */
+export async function fetchForecastMany(points, days, fetchImpl = fetch) {
+  if (!points.length) return [];
+  const data = await getJson(forecastPointsUrl(points, days), fetchImpl);
+  const list = Array.isArray(data) ? data : [data];
+  return points.map((_, i) => (usableForecast(list[i]) ? list[i] : null));
 }
