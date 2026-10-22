@@ -41,11 +41,18 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 - [Photo of the month](https://sunsetping.com/photo-of-the-month): subscribers reply to any SunsetPing email; the winner is featured on the site, in the newsletter, and @MosheLevis on X
 - [City index](https://sunsetping.com/sunset): 65 city forecast pages
 - [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, tonight's score, and sunset times for the next 7 days in the HTML
+- [Best sunsets tonight](https://sunsetping.com/tonight): all 65 cities ranked by tonight's score
 - [Sitemap](https://sunsetping.com/sitemap.xml)
 
 City page pattern: https://sunsetping.com/sunset/<city-slug>
 Sunset time pattern: https://sunsetping.com/sunset-time/<city-slug>
 Share-a-forecast pattern: https://sunsetping.com/s/<place>
+
+## Best sunsets tonight
+
+https://sunsetping.com/tonight ranks the 65 catalog cities by tonight's sunset score, using the same scorer as the city pages. Each row has the rank, the city and region, the score from 1 to 10, the verdict, and the local sunset time, and links to that city's page. The list is cached for about 25 minutes. Do not invent a score. Fetch the page.
+
+- [Best sunsets tonight](https://sunsetping.com/tonight)
 
 ## Golden hour
 

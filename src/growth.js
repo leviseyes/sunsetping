@@ -6,6 +6,7 @@ import { socialText } from "./social.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { weekSunsetTimes } from "./sun.js";
 import { OUTLOOK_CTA, greatNightsField, moshPdfUrl, perkListHtml } from "./signup.js";
+import { citiesWithCoords, rankTonight } from "./tonight.js";
 
 const SITE = "https://sunsetping.com";
 const OG_IMAGE = `${SITE}/images/hero-sunset.jpg`;
@@ -21,6 +22,13 @@ export const OG_CARD_CACHE = "public, max-age=86400, s-maxage=86400";
  * unfurled earlier stays on the old picture until this query string changes.
  */
 export const OG_CARD_VERSION = "3";
+/**
+ * Bump when rendered city HTML changes so a deploy misses the edge cache.
+ * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
+ */
+export const CITY_HTML_CACHE_VERSION = "2";
+/** Edge cache for /tonight. 25 minutes, same window as a city page. */
+export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
 const FALLBACK_CACHE = "public, max-age=60";
 
@@ -89,6 +97,30 @@ ${greatNightsField()}
 <button class="btn" type="submit">${esc(button)}</button>`;
 }
 
+/** Real tonight numbers when the page already has them. Otherwise a labeled example with no clock times. */
+function sampleAlertText(cityName, score) {
+  const sunset = score?.sunset;
+  const value = score?.score;
+  if (sunset && value != null && value !== "") {
+    const why = String(score.reason || "the sky is worth a look").replace(/\.$/, "");
+    const golden = score.viewing?.goldenHourStart || score.goldenHourStart;
+    const goldenText = golden ? `, golden hour starts ${golden}` : "";
+    return `Sample alert: "${cityName} tonight: ${value}/10, ${why}. Sunset ${sunset}${goldenText}."`;
+  }
+  return `Sample alert (example): "${cityName} tonight: 8/10, high clouds to catch the color. The email includes the local sunset and golden hour."`;
+}
+
+function heroSignup({ id = "hero", location = "", button, sample }) {
+  return `<section class="hero-signup-city" data-welcome-host>
+<form class="stack hero-signup-form" action="/api/subscribe" method="post" data-signup>
+${signupFields({ id, location, button })}
+</form>
+<p class="sample-alert">${esc(sample)}</p>
+</section>`;
+}
+
+const TONIGHT_LINK = `<p class="tonight-cross"><a href="/tonight">See tonight's best sunsets across the US</a></p>`;
+
 function inlineSignup(location = "", showMosh = false) {
   const place = location ? String(location).split(",")[0] : "";
   return `<section class="panel signup-block" id="signup" data-welcome-host>
@@ -117,7 +149,7 @@ function footer(location = "", showMosh = false) {
 ${perkListHtml(showMosh)}
 ${signupFields({ id: "footer", location, button: "Email me" })}
 </form>
-<p class="footer-links">© 2026 SunsetPing · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/photo-of-the-month">Photo of the month</a> · <a href="/#signup">Get free alerts</a></p></footer>`;
+<p class="footer-links">© 2026 SunsetPing · <a href="/tonight">Best sunsets tonight</a> · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/photo-of-the-month">Photo of the month</a> · <a href="/#signup">Get free alerts</a></p></footer>`;
 }
 
 function htmlResponse(html, status = 200, cacheControl = "public, max-age=3600") {
@@ -272,7 +304,7 @@ export function sunsetIndex(env) {
 ${topbar()}
 <p class="kicker">City forecasts</p>
 <h1>Will tonight's sunset be good where you're going?</h1>
-<p class="lede">Each page has tonight's score, the sunset time, a few places people stand, and a free alert prefilled with that city.</p>
+<p class="lede">Each page has tonight's score, the sunset time, a few places people stand, and a free alert prefilled with that city. <a href="/tonight">See tonight's best sunsets across the US</a>.</p>
 <nav class="city-list" aria-label="Sunset cities">${cards}</nav>
 ${inlineSignup("", Boolean(moshPdfUrl(env)))}
 </main>${footer("", Boolean(moshPdfUrl(env)))}${stickySignup("", Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script></body></html>`;
@@ -566,6 +598,12 @@ ${topbar()}
 <h1>${esc(phrase)}</h1>
 <p class="lede">${esc(city.tip)}</p>
 ${goldenFactsHtml(city, score, qa)}
+${heroSignup({
+  location: city.query,
+  button: `Email me when ${city.city}'s sunset is worth it`,
+  sample: sampleAlertText(city.city, score),
+})}
+${TONIGHT_LINK}
 ${goldenWeekHtml(city, week)}
 ${quickAnswersHtml(city, qa, `Golden hour in ${city.city} — quick answers`)}
 <div class="tips">
@@ -598,7 +636,7 @@ export function goldenHourIndex(env) {
 ${topbar()}
 <p class="kicker">Golden hour</p>
 <h1>Golden hour today, for ${CITIES.length} cities</h1>
-<p class="lede">Each page has tonight's golden hour and blue hour, the sunset score, a week of golden-hour times, and places to stand.</p>
+<p class="lede">Each page has tonight's golden hour and blue hour, the sunset score, a week of golden-hour times, and places to stand. <a href="/tonight">See tonight's best sunsets across the US</a>.</p>
 <nav class="city-list" aria-label="Golden hour cities">${cards}</nav>
 ${inlineSignup("", Boolean(moshPdfUrl(env)))}
 </main>${footer("", Boolean(moshPdfUrl(env)))}${stickySignup("", Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script></body></html>`;
@@ -644,6 +682,12 @@ ${topbar()}
 <h1>${esc(question)}</h1>
 <p class="lede">${esc(city.tip)}</p>
 ${liveScoreHtml(city, score)}
+${heroSignup({
+  location: city.query,
+  button: `Email me when ${city.city}'s sunset is worth it`,
+  sample: sampleAlertText(city.city, score),
+})}
+${TONIGHT_LINK}
 ${weekTimesHtml(city, week)}
 ${quickAnswersHtml(city, qa)}
 <div class="tips">
@@ -688,7 +732,7 @@ function cityCacheRequest(requestUrl, slug, variant = "") {
   if (variant === "time") key.pathname = `/sunset-time/${slug}`;
   else if (variant === "golden") key.pathname = `/golden-hour/${slug}`;
   else key.pathname = `/sunset/${slug}`;
-  key.search = `?og=${OG_CARD_VERSION}`; // new meta/card version => fresh cache entry on deploy
+  key.search = `?og=${OG_CARD_VERSION}&html=${CITY_HTML_CACHE_VERSION}`; // new markup or card version => fresh cache entry on deploy
   key.hash = "";
   return new Request(key.toString(), { method: "GET" });
 }
@@ -819,13 +863,14 @@ export function sitemapXml(env) {
     "/photo-of-the-month",
     "/sunset",
     "/golden-hour",
+    "/tonight",
     ...CITIES.map((city) => `/sunset/${city.slug}`),
     ...CITIES.map((city) => `/sunset-time/${city.slug}`),
     ...CITIES.map((city) => `/golden-hour/${city.slug}`),
   ];
   const body = urls.map((path) => {
     const loc = `${base}${path}`;
-    const dated = path === "/sunset" || path === "/golden-hour" || path.startsWith("/sunset/") || path.startsWith("/sunset-time/") || path.startsWith("/golden-hour/");
+    const dated = path === "/sunset" || path === "/golden-hour" || path === "/tonight" || path.startsWith("/sunset/") || path.startsWith("/sunset-time/") || path.startsWith("/golden-hour/");
     if (dated) return `  <url><loc>${loc}</loc><lastmod>${lastmod}</lastmod></url>`;
     return `  <url><loc>${loc}</loc></url>`;
   }).join("\n");
@@ -858,12 +903,177 @@ export async function cityOg(env, slug) {
   return simplePage("No score card", "That sunset score card isn't available.", 404);
 }
 
+/** US Pacific calendar date, so "tonight" stays today through the evening. */
+export function usTonightLabel(now = new Date()) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(now);
+}
+
+function tonightCacheRequest(requestUrl, kind) {
+  const key = new URL(requestUrl instanceof URL ? requestUrl.href : String(requestUrl));
+  key.pathname = kind === "json" ? "/api/tonight" : "/tonight";
+  key.search = `?html=${CITY_HTML_CACHE_VERSION}`;
+  key.hash = "";
+  return new Request(key.toString(), { method: "GET" });
+}
+
+function tonightListHtml(ranking) {
+  if (!ranking.length) {
+    const cards = [...CITIES].sort((a, b) => a.city.localeCompare(b.city)).map((city) =>
+      `<a href="/sunset/${esc(city.slug)}"><strong>${esc(city.city)}</strong><span>${esc(city.region)}</span></a>`
+    ).join("");
+    return `<p class="lede">Tonight's scores didn't load. The city pages are still there, and the free alert works either way.</p>
+<nav class="city-list" aria-label="Sunset cities">${cards}</nav>`;
+  }
+  const expected = citiesWithCoords().length;
+  const note = ranking.length < expected
+    ? `<p class="week-note">Showing ${ranking.length} of ${expected} cities. The others didn't return a forecast.</p>`
+    : "";
+  const items = ranking.map((row) => {
+    const tz = row.tz ? ` ${esc(row.tz)}` : "";
+    return `<li>
+<a href="/sunset/${esc(row.slug)}">
+<span class="tonight-rank">${esc(row.rank)}</span>
+<span class="tonight-place"><strong>${esc(row.city)}</strong><span>${esc(row.region)}</span></span>
+<span class="tonight-score">${esc(row.score)}/10</span>
+<span class="tonight-verdict">${esc(row.verdict)}</span>
+<span class="tonight-time">Sunset ${esc(row.sunset)}${tz}</span>
+</a>
+</li>`;
+  }).join("");
+  return `${note}<ol class="tonight-list">${items}</ol>`;
+}
+
+function tonightSample(ranking) {
+  const top = ranking[0];
+  if (!top) return sampleAlertText("Seattle", null);
+  return sampleAlertText(top.city, top);
+}
+
+function tonightJsonLd(base, date, ranking) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    name: `Best sunsets tonight in the US (${date})`,
+    numberOfItems: ranking.length,
+    itemListOrder: "https://schema.org/ItemListOrderDescending",
+    itemListElement: ranking.map((row) => ({
+      "@type": "ListItem",
+      position: row.rank,
+      name: `${row.city}, ${row.region}`,
+      url: `${base}/sunset/${row.slug}`,
+      description: `${row.score}/10, ${row.verdict}. Sunset ${row.sunset}${row.tz ? ` ${row.tz}` : ""}.`,
+    })),
+  };
+}
+
+function tonightHtml(env, ranking) {
+  const base = origin(env);
+  const canonical = `${base}/tonight`;
+  const date = usTonightLabel();
+  const title = `Best Sunsets Tonight in the US (${date}) | SunsetPing`;
+  const description = `Tonight's best sunsets across ${CITIES.length} US cities landscape photographers shoot. Local sunset time, verdict, and a link to each city forecast. Free email alerts.`;
+  const showMosh = Boolean(moshPdfUrl(env));
+  const pageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: title,
+    url: canonical,
+    description,
+    isPartOf: { "@type": "WebSite", name: "SunsetPing", url: `${base}/` },
+  };
+  return `<!doctype html><html lang="en"><head>${head({
+    title,
+    description,
+    canonical,
+    jsonLd: [pageLd, tonightJsonLd(base, date, ranking)],
+  })}</head>
+<body><main class="wrap doc">
+${topbar()}
+<p class="kicker">United States</p>
+<h1>Best sunsets tonight in the US</h1>
+<p class="lede">${esc(date)}. ${CITIES.length} cities, ranked by tonight's sunset score. The same scorer as the city pages.</p>
+${heroSignup({
+  id: "hero",
+  button: "Email me when a sunset is worth it",
+  sample: tonightSample(ranking),
+})}
+${tonightListHtml(ranking)}
+${inlineSignup("", showMosh)}
+</main>${footer("", showMosh)}${stickySignup("", showMosh)}<script src="/app.js" defer></script></body></html>`;
+}
+
+function tonightCacheControl(ranking) {
+  return ranking.length
+    ? `public, max-age=${TONIGHT_CACHE_SECONDS}, s-maxage=${TONIGHT_CACHE_SECONDS}`
+    : FALLBACK_CACHE;
+}
+
+async function cachedTonight(kind, options, build) {
+  const cache = edgeCache();
+  const cacheKey = options.requestUrl ? tonightCacheRequest(options.requestUrl, kind) : null;
+  if (cache && cacheKey) {
+    const hit = await cache.match(cacheKey).catch(() => null);
+    if (hit) return hit;
+  }
+  const ranking = await rankTonight();
+  const response = build(ranking);
+  if (ranking.length && cache && cacheKey) {
+    try {
+      await remember(options.ctx, cache.put(cacheKey, response.clone()));
+    } catch (err) {
+      console.log(JSON.stringify({ event: "tonight_cache_put_failed", message: String(err?.message || err) }));
+    }
+  }
+  return response;
+}
+
+export async function tonightPage(env, options = {}) {
+  try {
+    return await cachedTonight("html", options, (ranking) => htmlResponse(tonightHtml(env, ranking), 200, tonightCacheControl(ranking)));
+  } catch (err) {
+    console.log(JSON.stringify({ event: "tonight_page_failed", message: String(err?.message || err) }));
+    return htmlResponse(tonightHtml(env, []), 200, FALLBACK_CACHE);
+  }
+}
+
+export async function tonightApi(env, options = {}) {
+  try {
+    return await cachedTonight("json", options, (ranking) => {
+      const body = { date: usTonightLabel(), ranking };
+      if (!ranking.length) body.error = "Tonight's ranking is temporarily unavailable.";
+      return new Response(JSON.stringify(body), {
+        status: 200,
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": tonightCacheControl(ranking),
+        },
+      });
+    });
+  } catch (err) {
+    console.log(JSON.stringify({ event: "tonight_api_failed", message: String(err?.message || err) }));
+    return new Response(JSON.stringify({
+      date: usTonightLabel(),
+      ranking: [],
+      error: "Tonight's ranking is temporarily unavailable.",
+    }), {
+      status: 200,
+      headers: { "content-type": "application/json; charset=utf-8", "cache-control": FALLBACK_CACHE },
+    });
+  }
+}
+
 export async function growthRoute(url, env, ctx, options = {}) {
   const path = url.pathname.replace(/\/$/, "") || "/";
   const ogMatch = path.match(/^\/og\/([^/]+)\.png$/i);
   if (ogMatch) return cityOg(env, decodeURIComponent(ogMatch[1]), ctx);
   if (path === `/${INDEXNOW_KEY}.txt`) return indexNowKeyResponse();
   if (path === "/sitemap.xml") return sitemapXml(env);
+  if (path === "/tonight") return tonightPage(env, { ctx, requestUrl: url });
   if (path === "/sunset") return sunsetIndex(env);
   if (path.startsWith("/sunset/")) {
     const slug = decodeURIComponent(path.slice("/sunset/".length));

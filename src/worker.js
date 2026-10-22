@@ -6,7 +6,7 @@ import { authorizeCron, issueError, prepareIssue, runWeeklyNewsletter } from "./
 import { ogSvg, sharePage, simplePage, welcomeOfferHtml, welcomePage } from "./pages.js";
 import { deliverWelcome, loadTonight } from "./welcome.js";
 import { stripeWebhook } from "./stripe.js";
-import { growthRoute } from "./growth.js";
+import { growthRoute, tonightApi } from "./growth.js";
 import { downloadLinks, moshPdfUrl, wantsGreatNights } from "./signup.js";
 
 const json = (o, status = 200, extra = {}) =>
@@ -161,6 +161,11 @@ async function rankInputs(spots) {
 
 async function handleApi(req, url, env, ctx) {
   if (url.pathname === "/api/stripe/webhook") return stripeWebhook(req, env);
+
+  if (url.pathname === "/api/tonight") {
+    if (req.method !== "GET") return json({ error: "GET only" }, 405);
+    return tonightApi(env, { ctx, requestUrl: url });
+  }
 
   if (url.pathname === "/api/score") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
