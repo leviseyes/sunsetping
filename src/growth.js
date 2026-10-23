@@ -1114,19 +1114,28 @@ export function embedDocument({ city, theme = "light", score = null }) {
   return `<!doctype html><html lang="en"${dark ? ` class="dark"` : ""}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Tonight's sunset in ${esc(city.city)} · SunsetPing</title><style>body{margin:0;font:14px/1.3 system-ui,sans-serif;background:#fffcf8;color:#1c1612}html.dark body{background:#211712;color:#fff8f2}.card{padding:10px 12px}.kicker{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#6f655d}h1{margin:2px 0 4px;font-size:18px;line-height:1.1}.score{margin:0;font-size:26px;font-weight:700}.score span{font-size:14px;font-weight:500;color:#6f655d}.label,.time,.credit{margin:2px 0}a{color:#c4541a}html.dark .kicker,html.dark .score span,html.dark .label,html.dark .time{color:#d9cfc6}html.dark a{color:#f0c27a}</style></head><body><article class="card"><p class="kicker">Tonight</p><h1>${esc(city.city)}</h1>${scoreHtml}${timeHtml}<p class="credit"><a href="${href}" target="_blank" rel="noopener">Sunset forecast by SunsetPing</a></p></article></body></html>`;
 }
 
-function embedResponse(html, live) {
-  const cacheControl = live
-    ? `public, max-age=${CITY_PAGE_CACHE_SECONDS}, s-maxage=${CITY_PAGE_CACHE_SECONDS}`
-    : "public, max-age=60";
+/** Browser max-age matches the edge so an iframe does not keep a score for hours. */
+const EMBED_CACHE_CONTROL = `public, max-age=${CITY_PAGE_CACHE_SECONDS}, s-maxage=${CITY_PAGE_CACHE_SECONDS}`;
+
+function embedResponse(html) {
   return new Response(html, {
     status: 200,
     headers: {
       "content-type": "text/html; charset=utf-8",
-      "cache-control": cacheControl,
+      "cache-control": EMBED_CACHE_CONTROL,
       "x-robots-tag": "noindex",
       "content-security-policy": "frame-ancestors *",
     },
   });
+}
+
+function stampEmbedCache(response) {
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", EMBED_CACHE_CONTROL);
+  headers.set("content-type", "text/html; charset=utf-8");
+  headers.set("x-robots-tag", "noindex");
+  headers.set("content-security-policy", "frame-ancestors *");
+  return new Response(response.body, { status: response.status, headers });
 }
 
 function embedCacheRequest(requestUrl, slug, theme) {
@@ -1199,7 +1208,7 @@ export async function embedPage(env, slug, options = {}) {
     const cacheKey = options.requestUrl ? embedCacheRequest(options.requestUrl, city.slug, theme) : null;
     if (cache && cacheKey) {
       const hit = await cache.match(cacheKey).catch(() => null);
-      if (hit) return hit;
+      if (hit) return stampEmbedCache(hit);
     }
     let score = null;
     try {
@@ -1210,7 +1219,7 @@ export async function embedPage(env, slug, options = {}) {
     }
     const shown = score || embedFallbackScore(city);
     const html = embedDocument({ city, theme, score: shown });
-    const response = embedResponse(html, Boolean(score));
+    const response = embedResponse(html);
     if (score && cache && cacheKey) {
       try {
         await remember(options.ctx, cache.put(cacheKey, response.clone()));
@@ -1221,7 +1230,7 @@ export async function embedPage(env, slug, options = {}) {
     return response;
   } catch (err) {
     console.log(JSON.stringify({ event: "embed_failed", slug: city.slug, message: String(err?.message || err) }));
-    return embedResponse(embedDocument({ city, theme, score: embedFallbackScore(city) }), false);
+    return embedResponse(embedDocument({ city, theme, score: embedFallbackScore(city) }));
   }
 }
 

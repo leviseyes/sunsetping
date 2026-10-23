@@ -163,6 +163,47 @@ test("POST /api/t always returns 204 and only counts allowed human events", asyn
   assert.equal(wideBody.totals.length, 60);
 });
 
+test("POST /api/t reads the body before the 204, then writes inside waitUntil", async () => {
+  const db = createDb();
+  const env = testEnv(db);
+  const payload = JSON.stringify({ e: "pageview", p: "/sunset/sedona", f: "hero", r: "https://news.example/story" });
+  // Workers locks the body once the response is sent. Scheduling waitUntil is that moment:
+  // a read that has not settled yet rejects, which is what production logged.
+  let sent = false;
+  const req = {
+    url: "https://sunsetping.com/api/t",
+    method: "POST",
+    headers: new Headers({
+      "content-type": "application/json",
+      "user-agent": BROWSER,
+      "content-length": String(payload.length),
+    }),
+    text() {
+      return new Promise((resolve, reject) => {
+        queueMicrotask(() => {
+          if (sent) reject(new Error("Can't read from request stream after response has been sent."));
+          else resolve(payload);
+        });
+      });
+    },
+  };
+  const pending = [];
+  const res = await worker.fetch(req, env, {
+    waitUntil(task) {
+      sent = true;
+      pending.push(task);
+    },
+  });
+  assert.equal(res.status, 204);
+  await Promise.all(pending);
+  assert.equal(db.state.analytics.length, 1);
+  assert.equal(db.state.analytics[0].event, "pageview");
+  assert.equal(db.state.analytics[0].path, "/sunset/sedona");
+  assert.equal(db.state.analytics[0].form, "hero");
+  assert.equal(db.state.analytics[0].referrer_host, "news.example");
+  assert.equal(db.state.analytics[0].count, 1);
+});
+
 test("a D1 failure on /api/t still returns 204", async () => {
   const env = {
     DB: {

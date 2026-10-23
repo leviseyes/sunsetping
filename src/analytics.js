@@ -266,49 +266,58 @@ export async function handleStats(req, env, url) {
   }
 }
 
-async function writeTrack(env, req) {
-  const ua = req.headers.get("user-agent");
-  if (isBotUa(ua)) return;
-  if (!allowsTrackSite(req.headers.get("sec-fetch-site"))) return;
+/**
+ * Read and validate the beacon before any response is returned.
+ * The Workers runtime locks the request body once the response is sent, so
+ * this must not run inside ctx.waitUntil.
+ */
+async function readTrack(req) {
+  if (req.method !== "POST") return null;
+  if (isBotUa(req.headers.get("user-agent"))) return null;
+  if (!allowsTrackSite(req.headers.get("sec-fetch-site"))) return null;
   const declared = Number(req.headers.get("content-length") || 0);
-  if (Number.isFinite(declared) && declared > 1024) return;
+  if (Number.isFinite(declared) && declared > 1024) return null;
   const raw = await req.text();
-  if (raw.length > 1024) return;
+  if (raw.length > 1024) return null;
   let body;
   try {
     body = JSON.parse(raw);
   } catch {
-    return;
+    return null;
   }
-  if (!body || typeof body !== "object" || Array.isArray(body)) return;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const event = String(body.e || "").trim().toLowerCase();
-  if (!TRACK_EVENTS.includes(event)) return;
+  if (!TRACK_EVENTS.includes(event)) return null;
   let own = "";
   try {
     own = new URL(req.url).hostname;
   } catch {
     own = "";
   }
-  await recordAnalytics(env, {
+  return {
     event,
     path: body.p,
     form: body.f,
     referrer: normalizeReferrerHost(body.r, own),
-  });
+  };
 }
 
-/** POST /api/t. Always 204. The D1 write is best-effort and never fails the response. */
+/** POST /api/t. Always 204. Only the D1 write is deferred. */
 export async function handleTrack(req, env, ctx) {
-  const task = (async () => {
-    if (req.method !== "POST") return;
-    try {
-      await writeTrack(env, req);
-    } catch (err) {
+  let fields = null;
+  try {
+    fields = await readTrack(req);
+  } catch (err) {
+    console.log(JSON.stringify({ event: "analytics_write_failed", message: String(err?.message || err) }));
+    return new Response(null, { status: 204 });
+  }
+  if (fields) {
+    const task = recordAnalytics(env, fields).catch((err) => {
       console.log(JSON.stringify({ event: "analytics_write_failed", message: String(err?.message || err) }));
-    }
-  })();
-  if (typeof ctx?.waitUntil === "function") ctx.waitUntil(task);
-  else await task;
+    });
+    if (typeof ctx?.waitUntil === "function") ctx.waitUntil(task);
+    else await task;
+  }
   return new Response(null, { status: 204 });
 }
 

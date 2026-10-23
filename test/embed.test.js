@@ -83,8 +83,7 @@ test("GET /embed/<city> is frameable, noindex, and cached; unknown cities 404", 
       assert.equal(res.headers.get("x-frame-options"), null);
       assert.match(res.headers.get("content-security-policy") || "", /frame-ancestors \*/);
       assert.match(res.headers.get("x-robots-tag") || "", /noindex/i);
-      assert.match(res.headers.get("cache-control") || "", /public/);
-      assert.match(res.headers.get("cache-control") || "", /max-age=1500/);
+      assert.equal(res.headers.get("cache-control"), "public, max-age=1500, s-maxage=1500");
       const html = await res.text();
       assert.match(html, /<h1>Sedona<\/h1>/);
       assert.match(html, /10<span>\/10<\/span>/);
@@ -95,11 +94,16 @@ test("GET /embed/<city> is frameable, noindex, and cached; unknown cities 404", 
       assert.ok(Buffer.byteLength(html) < 6 * 1024);
       assert.equal(calls, 1);
       assert.equal(cache.store.size, 1);
+      const stored = [...cache.store.values()][0];
+      stored.headers = stored.headers.map(([name, value]) => (
+        name.toLowerCase() === "cache-control" ? [name, "public, max-age=14400"] : [name, value]
+      ));
 
       const again = await worker.fetch(new Request("https://sunsetping.com/embed/Sedona", {
         headers: { "user-agent": BROWSER, referer: "https://blog.example/other" },
       }), env, context);
       assert.equal(again.status, 200);
+      assert.equal(again.headers.get("cache-control"), "public, max-age=1500, s-maxage=1500");
       assert.match(await again.text(), /Sedona/);
       assert.equal(calls, 1);
 
@@ -142,7 +146,7 @@ test("an embed still renders the city, sunset time, and backlink when the foreca
         headers: { "user-agent": BROWSER },
       }), testEnv(createDb()));
       assert.equal(res.status, 200);
-      assert.match(res.headers.get("cache-control") || "", /public/);
+      assert.equal(res.headers.get("cache-control"), "public, max-age=1500, s-maxage=1500");
       assert.match(res.headers.get("x-robots-tag") || "", /noindex/);
       assert.match(res.headers.get("content-security-policy") || "", /frame-ancestors \*/);
       const html = await res.text();
