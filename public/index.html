@@ -63,12 +63,14 @@
         <li>Photo of the month: reply with your best sunset shot</li>
         <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
       </ul>
-      <form class="signup" action="/api/subscribe" method="post" data-signup>
+      <form class="signup" action="/api/subscribe" method="post" data-signup data-form="home-top">
         <label class="sr-only" for="hero-email">Email</label>
         <input id="hero-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
         <label class="sr-only" for="hero-location">City or ZIP, optional</label>
         <input id="hero-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
         <input type="hidden" name="tz">
+        <input type="hidden" name="signup_path" value="/">
+        <input type="hidden" name="signup_form" value="home-top">
         <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
         <button type="submit">Get free alerts</button>
       </form>
@@ -98,12 +100,14 @@
         <li>Photo of the month: reply with your best sunset shot</li>
         <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
       </ul>
-      <form class="signup" action="/api/subscribe" method="post" data-signup>
+      <form class="signup" action="/api/subscribe" method="post" data-signup data-form="home-mid">
         <label class="sr-only" for="email">Email</label>
         <input id="email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
         <label class="sr-only" for="location">City or ZIP, optional</label>
         <input id="location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
         <input type="hidden" name="tz">
+        <input type="hidden" name="signup_path" value="/">
+        <input type="hidden" name="signup_form" value="home-mid">
         <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
         <button type="submit">Get free alerts</button>
       </form>
@@ -208,7 +212,7 @@
   </div>
 </section>
 <footer class="site-footer">
-  <form class="footer-signup" action="/api/subscribe" method="post" data-signup>
+  <form class="footer-signup" action="/api/subscribe" method="post" data-signup data-form="footer">
     <p>Free sunset alerts</p>
     <ul class="perk-list">
       <li>7-day sunset quality outlook, free by email</li>
@@ -223,13 +227,15 @@
     <label class="sr-only" for="footer-location">City or ZIP, optional</label>
     <input id="footer-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
     <input type="hidden" name="tz">
+    <input type="hidden" name="signup_path" value="/">
+    <input type="hidden" name="signup_form" value="footer">
     <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
     <button type="submit">Email me</button>
   </form>
   <p class="footer-links">© 2026 SunsetPing · sunsetping.com · <a href="/tonight">Best sunsets tonight</a> · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/photo-of-the-month">Photo of the month</a> · <a href="#signup">Get free alerts</a></p>
 </footer>
 <aside class="signup-sticky" data-welcome-host>
-  <form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup>
+  <form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup data-form="sticky">
     <p class="signup-sticky-copy">Know when the light will be good before you drive out.</p>
     <ul class="perk-list">
       <li>7-day sunset quality outlook, free by email</li>
@@ -244,6 +250,8 @@
     <label class="sr-only" for="sticky-location">City or ZIP, optional</label>
     <input id="sticky-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
     <input type="hidden" name="tz">
+    <input type="hidden" name="signup_path" value="/">
+    <input type="hidden" name="signup_form" value="sticky">
     <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
     <button type="submit">Get free alerts</button>
   </form>

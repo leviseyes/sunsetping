@@ -109,6 +109,9 @@ async function submitSignup(form) {
   }
   try {
     const body = Object.fromEntries(new FormData(form));
+    body.signup_path = pagePath();
+    body.signup_form = formName(form);
+    track({ e: "form_submit", p: body.signup_path, f: body.signup_form, r: referrerHost() });
     const res = await fetch("/api/subscribe", {
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
@@ -181,6 +184,121 @@ async function syncMoshBonus() {
   });
 }
 syncMoshBonus();
+
+function pagePath() {
+  try { return location.pathname || "/"; } catch { return "/"; }
+}
+
+function referrerHost() {
+  try {
+    if (!document.referrer) return "";
+    const host = new URL(document.referrer).hostname.toLowerCase();
+    const own = (location.hostname || "").toLowerCase();
+    if (!host || host === own || host === "sunsetping.com" || host === "www.sunsetping.com") return "";
+    return host;
+  } catch {
+    return "";
+  }
+}
+
+function formName(form) {
+  const raw = String(form?.getAttribute("data-form") || "").trim().toLowerCase();
+  if (!raw || raw.length > 32 || !/^[a-z0-9][a-z0-9-]*$/.test(raw)) return "unknown";
+  return raw;
+}
+
+function track(payload) {
+  if (navigator.webdriver === true) return;
+  if (document.visibilityState === "prerender") return;
+  const body = JSON.stringify({
+    e: payload.e,
+    p: payload.p,
+    f: payload.f || "",
+    r: payload.r || "",
+  });
+  try {
+    if (typeof navigator.sendBeacon === "function" && navigator.sendBeacon("/api/t", body)) return;
+  } catch { /* fetch fallback */ }
+  try {
+    fetch("/api/t", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+      keepalive: true,
+    }).catch(() => {});
+  } catch { /* ignore */ }
+}
+
+function stampSignup(form) {
+  const path = pagePath();
+  const name = formName(form);
+  let pathInput = form.querySelector('input[name="signup_path"]');
+  if (!pathInput) {
+    pathInput = document.createElement("input");
+    pathInput.type = "hidden";
+    pathInput.name = "signup_path";
+    form.append(pathInput);
+  }
+  pathInput.value = path;
+  let formInput = form.querySelector('input[name="signup_form"]');
+  if (!formInput) {
+    formInput = document.createElement("input");
+    formInput.type = "hidden";
+    formInput.name = "signup_form";
+    form.append(formInput);
+  }
+  formInput.value = name;
+}
+
+function measure() {
+  if (navigator.webdriver === true) return;
+  if (document.visibilityState === "prerender") {
+    document.addEventListener("visibilitychange", function once() {
+      if (document.visibilityState === "prerender") return;
+      document.removeEventListener("visibilitychange", once);
+      measure();
+    });
+    return;
+  }
+  const ref = referrerHost();
+  track({ e: "pageview", p: pagePath(), f: "", r: ref });
+  const forms = document.querySelectorAll("form[data-signup]");
+  forms.forEach((form) => {
+    stampSignup(form);
+    const email = form.querySelector('input[type="email"]');
+    email?.addEventListener("focus", () => {
+      track({ e: "form_focus", p: pagePath(), f: formName(form), r: referrerHost() });
+    }, { once: true });
+  });
+  if (typeof IntersectionObserver === "function") {
+    const seen = new WeakSet();
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.intersectionRatio < 0.5) return;
+        const form = entry.target;
+        if (seen.has(form)) return;
+        seen.add(form);
+        observer.unobserve(form);
+        track({ e: "form_view", p: pagePath(), f: formName(form), r: referrerHost() });
+      });
+    }, { threshold: [0.5] });
+    forms.forEach((form) => observer.observe(form));
+  }
+}
+measure();
+
+const widgetPicker = document.getElementById("widget-picker");
+if (widgetPicker) {
+  const select = widgetPicker.querySelector("select[name=city]");
+  const frame = document.getElementById("widget-preview");
+  const snippet = document.getElementById("widget-snippet");
+  select?.addEventListener("change", () => {
+    const slug = select.value;
+    const src = `https://sunsetping.com/embed/${slug}`;
+    if (frame) frame.src = src;
+    if (snippet) snippet.value = `<iframe src="${src}" width="320" height="140" style="border:0" loading="lazy" title="Tonight's sunset forecast"></iframe>`;
+  });
+}
 
 document.getElementById("geo")?.addEventListener("click", () => {
   if (!navigator.geolocation) {

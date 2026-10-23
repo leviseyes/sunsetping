@@ -70,6 +70,8 @@ export function signupBlock({
   headline = SIGNUP_HEADLINE,
   lead = "",
   formClass = "stack signup",
+  formName = "share",
+  path = "",
 } = {}) {
   const perks = perkLines(showMosh).map((text, index) => {
     const attr = showMosh && index === 3 ? " data-mosh-perk" : "";
@@ -81,12 +83,14 @@ export function signupBlock({
   const prefix = esc(idPrefix);
   return `<h2>${esc(headline)}</h2>
 ${leadHtml}<ul class="perk-list">${perks}</ul>
-${bonus}<form class="${esc(formClass)}" action="/api/subscribe" method="post" data-signup>
+${bonus}<form class="${esc(formClass)}" action="/api/subscribe" method="post" data-signup data-form="${esc(formName)}">
 <label class="sr-only" for="${prefix}-email">Email</label>
 <input id="${prefix}-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
 <label class="sr-only" for="${prefix}-location">City or ZIP, optional</label>
 <input id="${prefix}-location" type="text" name="location"${loc} placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
 <input type="hidden" name="tz">
+<input type="hidden" name="signup_path" value="${esc(path)}">
+<input type="hidden" name="signup_form" value="${esc(formName)}">
 <label class="check"><input type="checkbox" name="great_only" value="1"> ${esc(GREAT_NIGHTS)}</label>
 <button class="btn" type="submit">${esc(button)}</button>
 </form>`;

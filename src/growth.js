@@ -1,10 +1,11 @@
+import { isBotUa, recordServerEvent, referrerFromRequest } from "./analytics.js";
 import { CITIES, cityBySlug, nearbyCities } from "./cities.js";
 import { INDEXNOW_KEY } from "./indexnow.js";
 import { fetchForecast, resolvePlace } from "./openmeteo.js";
 import { simplePage } from "./pages.js";
 import { socialText } from "./social.js";
-import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
-import { weekSunsetTimes } from "./sun.js";
+import { formatClock, scoreForecastDay, tzAbbrev, wallParts, withZoneAbbrev } from "./scoring.js";
+import { sunsetUtc, weekSunsetTimes } from "./sun.js";
 import { OUTLOOK_CTA, greatNightsField, moshPdfUrl, perkListHtml } from "./signup.js";
 import { citiesWithCoords, rankTonight } from "./tonight.js";
 
@@ -26,7 +27,7 @@ export const OG_CARD_VERSION = "3";
  * Bump when rendered city HTML changes so a deploy misses the edge cache.
  * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
  */
-export const CITY_HTML_CACHE_VERSION = "2";
+export const CITY_HTML_CACHE_VERSION = "3";
 /** Edge cache for /tonight. 25 minutes, same window as a city page. */
 export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
@@ -88,11 +89,13 @@ function locationField(location, id) {
   return `<label class="sr-only" for="${id}-location">City or ZIP, optional</label><input id="${id}-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional" autocomplete="address-level2">`;
 }
 
-function signupFields({ id, location = "", button = "Get free alerts" }) {
+function signupFields({ id, location = "", button = "Get free alerts", form = "", path = "" }) {
   return `<label class="sr-only" for="${id}-email">Email</label>
 <input id="${id}-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
 ${locationField(location, id)}
 <input type="hidden" name="tz">
+<input type="hidden" name="signup_path" value="${esc(path)}">
+<input type="hidden" name="signup_form" value="${esc(form)}">
 ${greatNightsField()}
 <button class="btn" type="submit">${esc(button)}</button>`;
 }
@@ -110,10 +113,10 @@ function sampleAlertText(cityName, score) {
   return `Sample alert (example): "${cityName} tonight: 8/10, high clouds to catch the color. The email includes the local sunset and golden hour."`;
 }
 
-function heroSignup({ id = "hero", location = "", button, sample }) {
+function heroSignup({ id = "hero", location = "", button, sample, form = "hero", path = "" }) {
   return `<section class="hero-signup-city" data-welcome-host>
-<form class="stack hero-signup-form" action="/api/subscribe" method="post" data-signup>
-${signupFields({ id, location, button })}
+<form class="stack hero-signup-form" action="/api/subscribe" method="post" data-signup data-form="${esc(form)}">
+${signupFields({ id, location, button, form, path })}
 </form>
 <p class="sample-alert">${esc(sample)}</p>
 </section>`;
@@ -121,35 +124,37 @@ ${signupFields({ id, location, button })}
 
 const TONIGHT_LINK = `<p class="tonight-cross"><a href="/tonight">See tonight's best sunsets across the US</a></p>`;
 
-function inlineSignup(location = "", showMosh = false) {
+function inlineSignup(location = "", showMosh = false, path = "", form = "inline") {
   const place = location ? String(location).split(",")[0] : "";
   return `<section class="panel signup-block" id="signup" data-welcome-host>
 <h2>${esc(SIGNUP_HEADLINE)}</h2>
 <p class="lede">${esc(OUTLOOK_CTA)}</p>
 ${perkListHtml(showMosh)}
-<form class="stack" action="/api/subscribe" method="post" data-signup>
-${signupFields({ id: "city-signup", location, button: place ? `Alert me in ${place}` : "Get free alerts" })}
+<form class="stack" action="/api/subscribe" method="post" data-signup data-form="${esc(form)}">
+${signupFields({ id: "city-signup", location, button: place ? `Alert me in ${place}` : "Get free alerts", form, path })}
 </form>
 </section>`;
 }
 
-function stickySignup(location = "", showMosh = false) {
+function stickySignup(location = "", showMosh = false, path = "") {
   return `<aside class="signup-sticky" data-welcome-host>
 <p class="signup-sticky-copy">${esc(SIGNUP_HEADLINE)}</p>
 ${perkListHtml(showMosh)}
-<form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup>
-${signupFields({ id: "sticky", location })}
+<form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup data-form="sticky">
+${signupFields({ id: "sticky", location, form: "sticky", path })}
 </form>
 </aside>`;
 }
 
-function footer(location = "", showMosh = false) {
-  return `<footer class="site-footer"><form class="footer-signup" action="/api/subscribe" method="post" data-signup>
+function footer(location = "", showMosh = false, options = {}) {
+  const path = options.path || "";
+  const extra = options.extra || "";
+  return `<footer class="site-footer"><form class="footer-signup" action="/api/subscribe" method="post" data-signup data-form="footer">
 <p>Free sunset alerts</p>
 ${perkListHtml(showMosh)}
-${signupFields({ id: "footer", location, button: "Email me" })}
+${signupFields({ id: "footer", location, button: "Email me", form: "footer", path })}
 </form>
-<p class="footer-links">© 2026 SunsetPing · <a href="/tonight">Best sunsets tonight</a> · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/photo-of-the-month">Photo of the month</a> · <a href="/#signup">Get free alerts</a></p></footer>`;
+<p class="footer-links">© 2026 SunsetPing · <a href="/tonight">Best sunsets tonight</a> · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/photo-of-the-month">Photo of the month</a> · <a href="/#signup">Get free alerts</a>${extra ? ` · ${extra}` : ""}</p></footer>`;
 }
 
 function htmlResponse(html, status = 200, cacheControl = "public, max-age=3600") {
@@ -306,8 +311,8 @@ ${topbar()}
 <h1>Will tonight's sunset be good where you're going?</h1>
 <p class="lede">Each page has tonight's score, the sunset time, a few places people stand, and a free alert prefilled with that city. <a href="/tonight">See tonight's best sunsets across the US</a>.</p>
 <nav class="city-list" aria-label="Sunset cities">${cards}</nav>
-${inlineSignup("", Boolean(moshPdfUrl(env)))}
-</main>${footer("", Boolean(moshPdfUrl(env)))}${stickySignup("", Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script></body></html>`;
+${inlineSignup("", Boolean(moshPdfUrl(env)), "/sunset")}
+</main>${footer("", Boolean(moshPdfUrl(env)), { path: "/sunset" })}${stickySignup("", Boolean(moshPdfUrl(env)), "/sunset")}<script src="/app.js" defer></script></body></html>`;
   return htmlResponse(html);
 }
 
@@ -602,6 +607,7 @@ ${heroSignup({
   location: city.query,
   button: `Email me when ${city.city}'s sunset is worth it`,
   sample: sampleAlertText(city.city, score),
+  path: `/golden-hour/${city.slug}`,
 })}
 ${TONIGHT_LINK}
 ${goldenWeekHtml(city, week)}
@@ -611,11 +617,11 @@ ${quickAnswersHtml(city, qa, `Golden hour in ${city.city} — quick answers`)}
 <h2>Where to shoot golden hour in ${esc(city.city)}</h2>
 <ul>${spots}</ul>
 </section>
-${inlineSignup(city.query, Boolean(moshPdfUrl(env)))}
+${inlineSignup(city.query, Boolean(moshPdfUrl(env)), `/golden-hour/${city.slug}`)}
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/golden-hour">All cities</a></nav>
 <p>${relatedCityLinks(city, "golden")}</p>
-</main>${footer(city.query, Boolean(moshPdfUrl(env)))}${stickySignup(city.query, Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script></body></html>`;
+</main>${footer(city.query, Boolean(moshPdfUrl(env)), { path: `/golden-hour/${city.slug}` })}${stickySignup(city.query, Boolean(moshPdfUrl(env)), `/golden-hour/${city.slug}`)}<script src="/app.js" defer></script></body></html>`;
 }
 
 export function goldenHourIndex(env) {
@@ -638,8 +644,8 @@ ${topbar()}
 <h1>Golden hour today, for ${CITIES.length} cities</h1>
 <p class="lede">Each page has tonight's golden hour and blue hour, the sunset score, a week of golden-hour times, and places to stand. <a href="/tonight">See tonight's best sunsets across the US</a>.</p>
 <nav class="city-list" aria-label="Golden hour cities">${cards}</nav>
-${inlineSignup("", Boolean(moshPdfUrl(env)))}
-</main>${footer("", Boolean(moshPdfUrl(env)))}${stickySignup("", Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script></body></html>`;
+${inlineSignup("", Boolean(moshPdfUrl(env)), "/golden-hour")}
+</main>${footer("", Boolean(moshPdfUrl(env)), { path: "/golden-hour" })}${stickySignup("", Boolean(moshPdfUrl(env)), "/golden-hour")}<script src="/app.js" defer></script></body></html>`;
   return htmlResponse(html);
 }
 
@@ -664,6 +670,8 @@ function cityHtml(env, city, score, variant = "") {
   const qa = cityQuickAnswers(city, score);
   const week = score?.week?.days?.length ? score.week : null;
   const described = describeWithWeek(description, week);
+  const pagePath = isTime ? `/sunset-time/${city.slug}` : `/sunset/${city.slug}`;
+  const embedLink = isTime ? "" : `<p><a href="/widget?city=${esc(city.slug)}">Add this forecast to your site</a></p>`;
   return `<!doctype html><html lang="en"><head>${head({
     title: isTime ? (score ? `Sunset Time Today in ${city.city}: ${score.sunset} (${score.score}/10) · SunsetPing` : `Sunset Time Today in ${city.city} · SunsetPing`) : score ? cityPageTitle(city.city, score) : `${question} · SunsetPing`,
     description: described,
@@ -686,6 +694,7 @@ ${heroSignup({
   location: city.query,
   button: `Email me when ${city.city}'s sunset is worth it`,
   sample: sampleAlertText(city.city, score),
+  path: pagePath,
 })}
 ${TONIGHT_LINK}
 ${weekTimesHtml(city, week)}
@@ -695,6 +704,7 @@ ${quickAnswersHtml(city, qa)}
 <h2>Where people stand</h2>
 <ul>${spots}</ul>
 <p><a href="/s/${esc(encodeURIComponent(city.query))}">Share tonight's forecast for ${esc(city.city)}</a></p>
+${embedLink}
 <div class="share-score" data-share-url="${esc(canonical)}" data-share-title="${esc(question)}" data-share-text="${esc(shareText)}">
 <button type="button" class="btn" id="share-score">Share tonight's score</button>
 <p class="share-fallbacks" hidden>
@@ -703,11 +713,11 @@ ${quickAnswersHtml(city, qa)}
 </p>
 </div>
 </section>
-${inlineSignup(city.query, Boolean(moshPdfUrl(env)))}
+${inlineSignup(city.query, Boolean(moshPdfUrl(env)), pagePath)}
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/sunset">All cities</a></nav>
 <p>${relatedCityLinks(city, isTime ? "time" : "")}</p>
-</main>${footer(city.query, Boolean(moshPdfUrl(env)))}${stickySignup(city.query, Boolean(moshPdfUrl(env)))}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
+</main>${footer(city.query, Boolean(moshPdfUrl(env)), { path: pagePath })}${stickySignup(city.query, Boolean(moshPdfUrl(env)), pagePath)}<script src="/app.js" defer></script>${SCORE_SCRIPT}</body></html>`;
 }
 
 function cityResponse(html, score) {
@@ -864,6 +874,7 @@ export function sitemapXml(env) {
     "/sunset",
     "/golden-hour",
     "/tonight",
+    "/widget",
     ...CITIES.map((city) => `/sunset/${city.slug}`),
     ...CITIES.map((city) => `/sunset-time/${city.slug}`),
     ...CITIES.map((city) => `/golden-hour/${city.slug}`),
@@ -1001,10 +1012,11 @@ ${heroSignup({
   id: "hero",
   button: "Email me when a sunset is worth it",
   sample: tonightSample(ranking),
+  path: "/tonight",
 })}
 ${tonightListHtml(ranking)}
-${inlineSignup("", showMosh)}
-</main>${footer("", showMosh)}${stickySignup("", showMosh)}<script src="/app.js" defer></script></body></html>`;
+${inlineSignup("", showMosh, "/tonight")}
+</main>${footer("", showMosh, { path: "/tonight", extra: `<a href="/widget">Add this forecast to your site</a>` })}${stickySignup("", showMosh, "/tonight")}<script src="/app.js" defer></script></body></html>`;
 }
 
 function tonightCacheControl(ranking) {
@@ -1067,12 +1079,213 @@ export async function tonightApi(env, options = {}) {
   }
 }
 
+export function embedTheme(value) {
+  return String(value || "").toLowerCase() === "dark" ? "dark" : "light";
+}
+
+/** Civil sunset for the catalog city when the forecast is down. */
+export function solarSunset(city, now = new Date()) {
+  try {
+    const today = wallParts(now, city.timezone);
+    const utc = sunsetUtc(today.year, today.month, today.day, city.lat, city.lon);
+    if (!utc) return null;
+    const local = wallParts(utc, city.timezone);
+    const pad = (n) => String(n).padStart(2, "0");
+    const iso = `${local.year}-${pad(local.month)}-${pad(local.day)}T${pad(local.hour)}:${pad(local.minute)}`;
+    return { sunset: formatClock(iso), tz: tzAbbrev(city.timezone, utc) };
+  } catch {
+    return null;
+  }
+}
+
+/** Tiny framed card. Inline CSS, no script, followed link back to the city page. */
+export function embedDocument({ city, theme = "light", score = null }) {
+  const dark = theme === "dark";
+  const clock = score?.sunset || "";
+  const zone = score?.tz || "";
+  const hasScore = score && score.score != null && score.score !== "";
+  const scoreHtml = hasScore
+    ? `<p class="score">${esc(score.score)}<span>/10</span></p><p class="label">${esc(score.verdict || "")}</p>`
+    : "";
+  const timeHtml = clock
+    ? `<p class="time">Sunset ${esc(clock)}${zone ? ` ${esc(zone)}` : ""}</p>`
+    : `<p class="time">Sunset time will be back shortly.</p>`;
+  const href = `${SITE}/sunset/${city.slug}?ref=embed`;
+  return `<!doctype html><html lang="en"${dark ? ` class="dark"` : ""}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Tonight's sunset in ${esc(city.city)} · SunsetPing</title><style>body{margin:0;font:14px/1.3 system-ui,sans-serif;background:#fffcf8;color:#1c1612}html.dark body{background:#211712;color:#fff8f2}.card{padding:10px 12px}.kicker{margin:0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#6f655d}h1{margin:2px 0 4px;font-size:18px;line-height:1.1}.score{margin:0;font-size:26px;font-weight:700}.score span{font-size:14px;font-weight:500;color:#6f655d}.label,.time,.credit{margin:2px 0}a{color:#c4541a}html.dark .kicker,html.dark .score span,html.dark .label,html.dark .time{color:#d9cfc6}html.dark a{color:#f0c27a}</style></head><body><article class="card"><p class="kicker">Tonight</p><h1>${esc(city.city)}</h1>${scoreHtml}${timeHtml}<p class="credit"><a href="${href}" target="_blank" rel="noopener">Sunset forecast by SunsetPing</a></p></article></body></html>`;
+}
+
+/** Browser max-age matches the edge so an iframe does not keep a score for hours. */
+const EMBED_CACHE_CONTROL = `public, max-age=${CITY_PAGE_CACHE_SECONDS}, s-maxage=${CITY_PAGE_CACHE_SECONDS}`;
+
+function embedResponse(html) {
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": EMBED_CACHE_CONTROL,
+      "x-robots-tag": "noindex",
+      "content-security-policy": "frame-ancestors *",
+    },
+  });
+}
+
+function stampEmbedCache(response) {
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", EMBED_CACHE_CONTROL);
+  headers.set("content-type", "text/html; charset=utf-8");
+  headers.set("x-robots-tag", "noindex");
+  headers.set("content-security-policy", "frame-ancestors *");
+  return new Response(response.body, { status: response.status, headers });
+}
+
+function embedCacheRequest(requestUrl, slug, theme) {
+  const key = new URL(requestUrl instanceof URL ? requestUrl.href : String(requestUrl));
+  key.pathname = `/embed/${slug}`;
+  key.search = `?theme=${theme}&html=${CITY_HTML_CACHE_VERSION}`;
+  key.hash = "";
+  return new Request(key.toString(), { method: "GET" });
+}
+
+async function scoreCatalogCity(city, env) {
+  const ms = scoreTimeoutMs(env);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  const fetchImpl = (url, init = {}) => {
+    const signal = init?.signal ? anySignal([controller.signal, init.signal]) : controller.signal;
+    return fetch(url, { ...init, signal });
+  };
+  let timeout;
+  const limit = new Promise((_, reject) => {
+    timeout = setTimeout(() => reject(new Error("Sunset forecast timed out.")), ms);
+  });
+  const job = (async () => {
+    const forecast = await fetchForecast(city.lat, city.lon, 1, fetchImpl);
+    return withZoneAbbrev(scoreForecastDay(forecast, 0, {
+      location: `${city.city}, ${city.region}`,
+      lat: city.lat,
+      lon: city.lon,
+      timezone: city.timezone,
+    }));
+  })();
+  job.catch(() => {});
+  try {
+    return await Promise.race([job, limit]);
+  } finally {
+    clearTimeout(timer);
+    clearTimeout(timeout);
+    controller.abort();
+  }
+}
+
+function embedFallbackScore(city) {
+  const solar = solarSunset(city);
+  if (!solar) return null;
+  return { sunset: solar.sunset, tz: solar.tz };
+}
+
+async function noteEmbedView(env, ctx, request, slug) {
+  if (request?.method && request.method !== "GET") return;
+  if (isBotUa(request?.headers?.get("user-agent"))) return;
+  await recordServerEvent(env, ctx, {
+    event: "embed_view",
+    path: `/embed/${slug}`,
+    form: "",
+    referrer: request ? referrerFromRequest(request) : "",
+  });
+}
+
+export async function embedPage(env, slug, options = {}) {
+  const city = cityBySlug(slug);
+  if (!city) return simplePage("No sunset widget", "That city isn't in the guide.", 404);
+  const theme = embedTheme(options.theme);
+  try {
+    await noteEmbedView(env, options.ctx, options.request, city.slug);
+  } catch (err) {
+    console.log(JSON.stringify({ event: "embed_analytics_failed", slug: city.slug, message: String(err?.message || err) }));
+  }
+  try {
+    const cache = edgeCache();
+    const cacheKey = options.requestUrl ? embedCacheRequest(options.requestUrl, city.slug, theme) : null;
+    if (cache && cacheKey) {
+      const hit = await cache.match(cacheKey).catch(() => null);
+      if (hit) return stampEmbedCache(hit);
+    }
+    let score = null;
+    try {
+      score = await scoreCatalogCity(city, env);
+    } catch (err) {
+      console.log(JSON.stringify({ event: "embed_score_fallback", slug: city.slug, message: String(err?.message || err) }));
+      score = null;
+    }
+    const shown = score || embedFallbackScore(city);
+    const html = embedDocument({ city, theme, score: shown });
+    const response = embedResponse(html);
+    if (score && cache && cacheKey) {
+      try {
+        await remember(options.ctx, cache.put(cacheKey, response.clone()));
+      } catch (err) {
+        console.log(JSON.stringify({ event: "embed_cache_put_failed", message: String(err?.message || err) }));
+      }
+    }
+    return response;
+  } catch (err) {
+    console.log(JSON.stringify({ event: "embed_failed", slug: city.slug, message: String(err?.message || err) }));
+    return embedResponse(embedDocument({ city, theme, score: embedFallbackScore(city) }));
+  }
+}
+
+const EMBED_SNIPPET = (slug) => `<iframe src="${SITE}/embed/${slug}" width="320" height="140" style="border:0" loading="lazy" title="Tonight's sunset forecast"></iframe>`;
+
+export function widgetPage(env, url) {
+  const base = origin(env);
+  const requested = String(url?.searchParams?.get("city") || "").toLowerCase();
+  const selected = cityBySlug(requested) || cityBySlug("sedona") || CITIES[0];
+  const canonical = `${base}/widget`;
+  const title = "Free sunset forecast widget for your photography website";
+  const description = "Embed tonight's sunset score on your photography site. A small card with the score, sunset time, and a link back to the SunsetPing forecast. Free.";
+  const options = [...CITIES].sort((a, b) => a.city.localeCompare(b.city)).map((city) =>
+    `<option value="${esc(city.slug)}"${city.slug === selected.slug ? " selected" : ""}>${esc(city.city)}, ${esc(city.region)}</option>`
+  ).join("");
+  const snippet = EMBED_SNIPPET(selected.slug);
+  const showMosh = Boolean(moshPdfUrl(env));
+  const html = `<!doctype html><html lang="en"><head>${head({ title: `${title} · SunsetPing`, description, canonical })}</head>
+<body><main class="wrap doc">
+${topbar()}
+<p class="kicker">For photography sites</p>
+<h1>${esc(title)}</h1>
+<p class="lede">Paste a card onto your site. It shows the city, tonight's score out of 10, the sunset time, and a link to the full forecast. The card is free, has no cookies, and does not need JavaScript.</p>
+<p>Pick a city. The preview and the snippet update together. Add <code>?theme=dark</code> or <code>?theme=light</code> on the embed URL if you want a specific look.</p>
+<form id="widget-picker" class="stack" action="/widget" method="get">
+<label for="widget-city">City</label>
+<select id="widget-city" name="city">${options}</select>
+<button class="btn" type="submit">Show this city</button>
+</form>
+<iframe id="widget-preview" src="${SITE}/embed/${esc(selected.slug)}" width="320" height="140" style="border:0" loading="lazy" title="Tonight's sunset forecast"></iframe>
+<label for="widget-snippet">Embed code</label>
+<textarea id="widget-snippet" class="widget-snippet" readonly rows="3">${esc(snippet)}</textarea>
+${inlineSignup("", showMosh, "/widget", "widget")}
+</main>${footer("", showMosh, { path: "/widget" })}${stickySignup("", showMosh, "/widget")}<script src="/app.js" defer></script></body></html>`;
+  return htmlResponse(html);
+}
+
 export async function growthRoute(url, env, ctx, options = {}) {
   const path = url.pathname.replace(/\/$/, "") || "/";
   const ogMatch = path.match(/^\/og\/([^/]+)\.png$/i);
   if (ogMatch) return cityOg(env, decodeURIComponent(ogMatch[1]), ctx);
   if (path === `/${INDEXNOW_KEY}.txt`) return indexNowKeyResponse();
   if (path === "/sitemap.xml") return sitemapXml(env);
+  if (path === "/widget") return widgetPage(env, url);
+  if (path === "/embed") return simplePage("No sunset widget", "That city isn't in the guide.", 404);
+  if (path.startsWith("/embed/")) {
+    const slug = decodeURIComponent(path.slice("/embed/".length)).toLowerCase();
+    if (!slug || slug.includes("/")) return simplePage("No sunset widget", "That city isn't in the guide.", 404);
+    return embedPage(env, slug, {
+      ctx,
+      request: options.request,
+      requestUrl: url,
+      theme: url.searchParams.get("theme"),
+    });
+  }
   if (path === "/tonight") return tonightPage(env, { ctx, requestUrl: url });
   if (path === "/sunset") return sunsetIndex(env);
   if (path.startsWith("/sunset/")) {

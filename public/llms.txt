@@ -42,6 +42,7 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 - [City index](https://sunsetping.com/sunset): 65 city forecast pages
 - [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, tonight's score, and sunset times for the next 7 days in the HTML
 - [Best sunsets tonight](https://sunsetping.com/tonight): all 65 cities ranked by tonight's score
+- [Forecast widget](https://sunsetping.com/widget): free embed of tonight's sunset score for a photography website
 - [Sitemap](https://sunsetping.com/sitemap.xml)
 
 City page pattern: https://sunsetping.com/sunset/<city-slug>
@@ -53,6 +54,12 @@ Share-a-forecast pattern: https://sunsetping.com/s/<place>
 https://sunsetping.com/tonight ranks the 65 catalog cities by tonight's sunset score, using the same scorer as the city pages. Each row has the rank, the city and region, the score from 1 to 10, the verdict, and the local sunset time, and links to that city's page. The list is cached for about 25 minutes. Do not invent a score. Fetch the page.
 
 - [Best sunsets tonight](https://sunsetping.com/tonight)
+
+## Forecast widget
+
+https://sunsetping.com/widget explains a free card photographers can paste onto their own site. The card shows one catalog city's name, tonight's score out of 10, the sunset time, and a followed link back to that city's forecast. The embed URL is https://sunsetping.com/embed/<city-slug>. Embed URLs are not listed in the sitemap. Do not invent a score. The card reads the same forecast as the city page.
+
+- [Free sunset forecast widget](https://sunsetping.com/widget)
 
 ## Golden hour
 

@@ -1,4 +1,4 @@
--- Full schema snapshot after migrations/0005_early_access.sql.
+-- Full schema snapshot after migrations/0006_analytics.sql.
 -- Existing databases should apply the files in migrations/ (wrangler d1 migrations apply).
 -- This file is the greenfield equivalent, not a second migration.
 
@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS subscribers (
   lead_minutes INTEGER NOT NULL DEFAULT 180,
   early_access INTEGER NOT NULL DEFAULT 1,
   stripe_customer_id TEXT,
-  stripe_subscription_id TEXT
+  stripe_subscription_id TEXT,
+  signup_path TEXT,
+  signup_form TEXT
 );
 
 CREATE TABLE IF NOT EXISTS saved_locations (
@@ -71,4 +73,16 @@ CREATE TABLE IF NOT EXISTS checkout_attempts (
   asn INTEGER,
   as_org TEXT,
   session_id_suffix TEXT
+);
+
+-- Daily first-party counts. No cookies, IPs, emails, or user ids.
+-- day is YYYY-MM-DD in America/Los_Angeles. Application writes upsert count = count + 1.
+CREATE TABLE IF NOT EXISTS analytics_daily (
+  day TEXT NOT NULL /* YYYY-MM-DD in America/Los_Angeles */,
+  path TEXT NOT NULL,
+  event TEXT NOT NULL,
+  form TEXT NOT NULL DEFAULT '',
+  referrer_host TEXT NOT NULL DEFAULT '',
+  count INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(day, path, event, form, referrer_host)
 );
