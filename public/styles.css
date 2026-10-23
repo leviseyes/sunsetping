@@ -567,6 +567,18 @@ body.welcome { background: var(--cream); }
 }
 .welcome-pass { margin: 14px 0 0; text-align: center; }
 .welcome-pass a { color: var(--muted); font-size: 15px; text-decoration: underline; text-underline-offset: 3px; }
+.widget-snippet {
+  display: block;
+  width: min(640px, 100%);
+  margin: 8px 0 28px;
+  padding: 12px;
+  font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+}
+#widget-preview { display: block; margin: 16px 0; background: #fff; }
 @media (min-width: 720px) {
   .welcome-pro { padding: 26px 24px 20px; }
   .welcome-pro .actions { flex-direction: row; align-items: stretch; }

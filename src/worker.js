@@ -8,6 +8,7 @@ import { deliverWelcome, loadTonight } from "./welcome.js";
 import { stripeWebhook } from "./stripe.js";
 import { growthRoute, tonightApi } from "./growth.js";
 import { downloadLinks, moshPdfUrl, wantsGreatNights } from "./signup.js";
+import { handleStats, handleTrack, recordServerEvent, referrerFromRequest, signupAttribution } from "./analytics.js";
 
 const json = (o, status = 200, extra = {}) =>
   new Response(JSON.stringify(o), {
@@ -72,6 +73,7 @@ async function subscribe(req, env, ctx) {
     }
   }
   const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
+  const attribution = signupAttribution(body);
   const prior = await env.DB.prepare(
     "SELECT id, location, lat, lon, tz FROM subscribers WHERE email = ?1"
   ).bind(email).first();
@@ -82,10 +84,17 @@ async function subscribe(req, env, ctx) {
     lon: place ? place.longitude : (prior?.lon ?? null),
     tz: place ? (place.timezone || body.tz || null) : (prior?.tz || body.tz || null),
   };
-  await env.DB.prepare(
-    `INSERT INTO subscribers (email, location, lat, lon, tz, unsubscribe_token, status, score_threshold) VALUES (?1,?2,?3,?4,?5,?6,'active',?7)
-     ON CONFLICT(email) DO UPDATE SET location=?2, lat=?3, lon=?4, tz=?5, status='active', score_threshold=?7`
-  ).bind(email, stored.location, stored.lat, stored.lon, stored.tz, token, threshold).run();
+  await saveSubscriber(env, {
+    email,
+    location: stored.location,
+    lat: stored.lat,
+    lon: stored.lon,
+    tz: stored.tz,
+    token,
+    threshold,
+    signupPath: attribution.path,
+    signupForm: attribution.form,
+  });
   const row = await env.DB.prepare(
     "SELECT id, email, location, unsubscribe_token FROM subscribers WHERE email = ?1"
   ).bind(email).first();
@@ -97,8 +106,31 @@ async function subscribe(req, env, ctx) {
     if (typeof ctx?.waitUntil === "function") ctx.waitUntil(task);
     else await task;
   }
+  await recordServerEvent(env, ctx, {
+    event: "signup_ok",
+    path: attribution.path || "/other",
+    form: attribution.form || "",
+    referrer: referrerFromRequest(req),
+  });
   if (asJson) return json({ ok: true, location: stored.location, tonight, downloads, offerHtml: welcomeOfferHtml(offer) });
   return welcomePage(offer);
+}
+
+async function saveSubscriber(env, row) {
+  const withAttribution = `INSERT INTO subscribers (email, location, lat, lon, tz, unsubscribe_token, status, score_threshold, signup_path, signup_form) VALUES (?1,?2,?3,?4,?5,?6,'active',?7,?8,?9)
+     ON CONFLICT(email) DO UPDATE SET location=?2, lat=?3, lon=?4, tz=?5, status='active', score_threshold=?7`;
+  const legacy = `INSERT INTO subscribers (email, location, lat, lon, tz, unsubscribe_token, status, score_threshold) VALUES (?1,?2,?3,?4,?5,?6,'active',?7)
+     ON CONFLICT(email) DO UPDATE SET location=?2, lat=?3, lon=?4, tz=?5, status='active', score_threshold=?7`;
+  try {
+    await env.DB.prepare(withAttribution).bind(
+      row.email, row.location, row.lat, row.lon, row.tz, row.token, row.threshold, row.signupPath, row.signupForm,
+    ).run();
+  } catch (err) {
+    if (!/no such column/i.test(String(err?.message || err))) throw err;
+    await env.DB.prepare(legacy).bind(
+      row.email, row.location, row.lat, row.lon, row.tz, row.token, row.threshold,
+    ).run();
+  }
 }
 
 async function unsubscribe(url, env) {
@@ -161,6 +193,8 @@ async function rankInputs(spots) {
 
 async function handleApi(req, url, env, ctx) {
   if (url.pathname === "/api/stripe/webhook") return stripeWebhook(req, env);
+  if (url.pathname === "/api/t") return handleTrack(req, env, ctx);
+  if (url.pathname === "/api/stats") return handleStats(req, env, url);
 
   if (url.pathname === "/api/tonight") {
     if (req.method !== "GET") return json({ error: "GET only" }, 405);
@@ -338,7 +372,7 @@ export default {
         assetUrl.pathname = "/faq.html";
         return env.ASSETS.fetch(new Request(assetUrl, req));
       }
-      const growth = await growthRoute(url, env, ctx);
+      const growth = await growthRoute(url, env, ctx, { request: req });
       if (growth) return growth;
       if (url.pathname.startsWith("/api/")) {
         const handled = await handleApi(req, url, env, ctx);
@@ -362,7 +396,7 @@ export default {
       if (cityPath.startsWith("/sunset/") || cityPath.startsWith("/golden-hour/")) {
         console.log(JSON.stringify({ event: "city_page_error", path: url.pathname, message: String(err?.message || err) }));
         try {
-          const fallback = await growthRoute(url, env, ctx, { skipScore: true });
+          const fallback = await growthRoute(url, env, ctx, { skipScore: true, request: req });
           if (fallback) return fallback;
         } catch (inner) {
           console.log(JSON.stringify({ event: "city_page_fallback_error", path: url.pathname, message: String(inner?.message || inner) }));

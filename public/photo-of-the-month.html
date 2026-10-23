@@ -53,12 +53,14 @@
       <li>Photo of the month: reply with your best sunset shot</li>
       <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
     </ul>
-    <form class="stack signup" action="/api/subscribe" method="post" data-signup>
+    <form class="stack signup" action="/api/subscribe" method="post" data-signup data-form="photo">
       <label class="sr-only" for="photo-email">Email</label>
       <input id="photo-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
       <label class="sr-only" for="photo-location">City or ZIP, optional</label>
       <input id="photo-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
       <input type="hidden" name="tz">
+      <input type="hidden" name="signup_path" value="/photo-of-the-month">
+      <input type="hidden" name="signup_form" value="photo">
       <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
       <button class="btn" type="submit">Get free alerts</button>
     </form>

@@ -42,6 +42,7 @@ export function createDb(initial = {}) {
     sends: (initial.sends || []).map((s) => ({ ...s })),
     stripeEvents: (initial.stripeEvents || []).map((s) => ({ ...s })),
     checkoutAttempts: (initial.checkoutAttempts || []).map((s) => ({ ...s })),
+    analytics: (initial.analytics || []).map((s) => ({ ...s })),
     nextId: initial.nextId || 100,
   };
   const query = (sql, args, mode) => {
@@ -132,12 +133,27 @@ export function createDb(initial = {}) {
           status: "active",
           plan: "free",
           score_threshold: args.length > 6 ? args[6] : null,
+          signup_path: args.length > 7 ? args[7] : null,
+          signup_form: args.length > 8 ? args[8] : null,
           sunrise_alerts: 0,
           day_before: 0,
           lead_minutes: 180,
         });
       }
       return { success: true, meta: { changes: 1 } };
+    }
+    if (sql.includes("INSERT INTO analytics_daily")) {
+      const key = { day: args[0], path: args[1], event: args[2], form: args[3] ?? "", referrer_host: args[4] ?? "" };
+      const found = state.analytics.find((row) => row.day === key.day && row.path === key.path && row.event === key.event && row.form === key.form && row.referrer_host === key.referrer_host);
+      if (found) found.count += 1;
+      else state.analytics.push({ ...key, count: 1 });
+      return { success: true, meta: { changes: 1 } };
+    }
+    if (sql.includes("FROM analytics_daily")) {
+      const from = args[0];
+      const to = args[1];
+      const rows = state.analytics.filter((row) => row.day >= from && row.day <= to);
+      return mode === "first" ? rows[0] || null : rows;
     }
     if (sql.includes("INSERT INTO saved_locations")) {
       state.saved.push({ id: ++state.nextId, subscriber_id: args[0], label: args[1], lat: args[2], lon: args[3], tz: args[4] });
