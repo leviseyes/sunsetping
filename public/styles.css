@@ -593,3 +593,8 @@ body.welcome { background: var(--cream); }
 .hero-quick-perks { margin: 8px 0 0; font-size: 14px; opacity: .9; }
 .signup-sticky-close { background: transparent !important; border: 0 !important; color: inherit !important; font-size: 22px; min-width: 40px; padding: 0 !important; }
 .signup-sticky.is-hidden { display: none; }
+
+/* One-field hero on city pages and /tonight */
+.hero-signup-city.hero-quick .hero-quick-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.hero-signup-city.hero-quick .hero-quick-form input[type=email] { flex: 1 1 220px; min-height: 52px; font-size: 17px; }
+.hero-signup-city.hero-quick .hero-quick-form button { min-height: 52px; font-weight: 700; padding: 0 22px; }

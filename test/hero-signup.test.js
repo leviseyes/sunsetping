@@ -24,7 +24,7 @@ function austinForecast() {
 }
 
 function heroForm(html) {
-  const start = html.indexOf('class="stack hero-signup-form"');
+  const start = html.indexOf('class="signup hero-signup-form hero-quick-form"');
   assert.ok(start > 0, "hero signup form");
   const end = html.indexOf("</form>", start);
   return html.slice(start, end);
@@ -39,8 +39,7 @@ function assertHero(html, { weekId, city }) {
   assert.match(form, new RegExp(`type="hidden" name="location" value="${city.query}"`));
   assert.doesNotMatch(form, /id="hero-location"/);
   assert.match(form, /type="hidden" name="tz"/);
-  assert.match(form, /name="great_only" value="1"/);
-  assert.match(form, /Only email me on great nights \(8\+\)/);
+  assert.doesNotMatch(form, /name="great_only"/, "one-field hero: email + button only");
   assert.match(form, new RegExp(`Email me when ${city.city}&#39;s sunset is worth it`));
   assert.equal((html.match(/id="hero-email"/g) || []).length, 1);
   assert.equal((html.match(/id="city-signup-email"/g) || []).length, 1);
@@ -92,7 +91,7 @@ test("a city page keeps the hero form when the forecast fails, with an example a
       const form = heroForm(html);
       assert.match(form, /type="hidden" name="location" value="Austin, Texas"/);
       assert.match(form, /id="hero-email"/);
-      assert.match(form, /name="great_only"/);
+      assert.doesNotMatch(form, /name="great_only"/);
       assert.match(html, /id="city-signup-email"/);
       const sample = html.match(/<p class="sample-alert">([\s\S]*?)<\/p>/)[1];
       assert.match(sample, /Sample alert \(example\)/);
@@ -103,3 +102,4 @@ test("a city page keeps the hero form when the forecast fails, with an example a
     }
   });
 });
+

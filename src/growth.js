@@ -27,7 +27,7 @@ export const OG_CARD_VERSION = "3";
  * Bump when rendered city HTML changes so a deploy misses the edge cache.
  * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
  */
-export const CITY_HTML_CACHE_VERSION = "3";
+export const CITY_HTML_CACHE_VERSION = "4";
 /** Edge cache for /tonight. 25 minutes, same window as a city page. */
 export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
@@ -113,11 +113,23 @@ function sampleAlertText(cityName, score) {
   return `Sample alert (example): "${cityName} tonight: 8/10, high clouds to catch the color. The email includes the local sunset and golden hour."`;
 }
 
+/** One email field + button. The city comes from the page (hidden) or, when absent, from the visitor's location server-side. */
+function quickFields({ id, location = "", button = "Email me good sunsets", form = "", path = "" }) {
+  const loc = location ? `<input type="hidden" name="location" value="${esc(location)}">` : "";
+  return `<label class="sr-only" for="${id}-email">Email</label>
+<input id="${id}-email" type="email" name="email" placeholder="Your email" required autocomplete="email" inputmode="email" aria-label="Email">
+${loc}<input type="hidden" name="tz">
+<input type="hidden" name="signup_path" value="${esc(path)}">
+<input type="hidden" name="signup_form" value="${esc(form)}">
+<button class="btn" type="submit">${esc(button)}</button>`;
+}
+
 function heroSignup({ id = "hero", location = "", button, sample, form = "hero", path = "" }) {
-  return `<section class="hero-signup-city" data-welcome-host>
-<form class="stack hero-signup-form" action="/api/subscribe" method="post" data-signup data-form="${esc(form)}">
-${signupFields({ id, location, button, form, path })}
+  return `<section class="hero-signup-city hero-quick" data-welcome-host>
+<form class="signup hero-signup-form hero-quick-form" action="/api/subscribe" method="post" data-signup data-form="${esc(form)}">
+${quickFields({ id, location, button, form, path })}
 </form>
+<p class="hero-quick-perks">100% free · 8+ night alerts · 7-day outlook · unsubscribe in one click</p>
 <p class="sample-alert">${esc(sample)}</p>
 </section>`;
 }
@@ -137,11 +149,13 @@ ${signupFields({ id: "city-signup", location, button: place ? `Alert me in ${pla
 }
 
 function stickySignup(location = "", showMosh = false, path = "") {
+  const place = location ? String(location).split(",")[0] : "";
+  const copy = place ? `Free sunset alerts for ${place}. Only good nights.` : "Free sunset alerts for photographers. Only good nights.";
   return `<aside class="signup-sticky" data-welcome-host>
-<p class="signup-sticky-copy">${esc(SIGNUP_HEADLINE)}</p>
-${perkListHtml(showMosh)}
 <form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup data-form="sticky">
-${signupFields({ id: "sticky", location, form: "sticky", path })}
+<p class="signup-sticky-copy">${esc(copy)}</p>
+${quickFields({ id: "sticky", location, button: "Get free alerts", form: "sticky", path })}
+<button type="button" class="signup-sticky-close" aria-label="Close" data-sticky-close>×</button>
 </form>
 </aside>`;
 }
