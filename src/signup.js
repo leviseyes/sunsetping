@@ -49,8 +49,7 @@ export function perkListHtml(showMosh) {
     const attr = showMosh && index === 3 ? " data-mosh-perk" : "";
     return `<li${attr}>${esc(text)}</li>`;
   }).join("");
-  const bonus = showMosh ? `<p class="bonus" data-mosh-bonus>${esc(MOSH_BONUS)}</p>` : "";
-  return `<ul class="perk-list">${items}</ul>${bonus}`;
+  return `<ul class="perk-list">${items}</ul>`;
 }
 
 export function greatNightsField() {
@@ -77,7 +76,7 @@ export function signupBlock({
     const attr = showMosh && index === 3 ? " data-mosh-perk" : "";
     return `<li${attr}>${esc(text)}</li>`;
   }).join("");
-  const bonus = showMosh ? `<p class="bonus" data-mosh-bonus>${esc(MOSH_BONUS)}</p>` : "";
+  const bonus = "";
   const leadHtml = lead ? `<p class="lede">${esc(lead)}</p>` : "";
   const loc = location ? ` value="${esc(location)}"` : "";
   const prefix = esc(idPrefix);

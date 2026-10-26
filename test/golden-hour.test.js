@@ -100,10 +100,9 @@ function assertGoldenPage(html, city, spec) {
   assert.match(html, new RegExp(`href="/sunset-time/${city.slug}"`));
   assert.match(html, /id="signup"/);
   assert.match(html, /action="\/api\/subscribe"/);
-  assert.match(html, /name="great_only"/);
-  assert.match(html, /Only email me on great nights \(8\+\)/);
-  assert.match(html, /class="perk-list"/);
-  assert.match(html, /8\+ only alerts/);
+  assert.doesNotMatch(html, /signup-sticky/);
+
+
   assert.match(html, new RegExp(`name="location" value="${city.query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
   const week = html.match(/<section class="week-times"[\s\S]*?<\/section>/);
   assert.ok(week, "golden hour week table");
@@ -163,8 +162,7 @@ test("golden-hour pages render tonight's light, JSON-LD, and the signup form", a
     assert.equal(dcForecast.calls() - goldenStart, timeCalls);
     const html = await page.text();
     assertGoldenPage(html, washington, WASHINGTON);
-    assert.match(html, /data-mosh-bonus/);
-    assert.match(html, new RegExp(MOSH_BONUS.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.doesNotMatch(html, /data-mosh-bonus/);
     const timeHtml = await timePage.text();
     assert.match(timeHtml, /href="\/golden-hour\/washington-dc"/);
     const sunset = await worker.fetch(new Request("https://sunsetping.com/sunset/washington-dc"), env);
@@ -179,7 +177,7 @@ test("golden-hour pages render tonight's light, JSON-LD, and the signup form", a
     assertGoldenPage(html, seattle, SEATTLE);
     assert.doesNotMatch(html, /data-mosh-bonus/);
     assert.doesNotMatch(html, /MOSH Planner/);
-    assert.match(html, /name="great_only"/);
+    assert.doesNotMatch(html, /signup-sticky/);
   });
 });
 

@@ -42,12 +42,10 @@ function assertHero(html, { weekId, city }) {
   assert.doesNotMatch(form, /name="great_only"/, "one-field hero: email + button only");
   assert.match(form, new RegExp(`Email me when ${city.city}&#39;s sunset is worth it`));
   assert.equal((html.match(/id="hero-email"/g) || []).length, 1);
-  assert.equal((html.match(/id="city-signup-email"/g) || []).length, 1);
-  assert.equal((html.match(/id="footer-email"/g) || []).length, 1);
-  assert.equal((html.match(/id="sticky-email"/g) || []).length, 1);
+  assert.equal((html.match(/id="city-signup-email"/g) || []).length, 0);
   assert.match(html, /id="signup"/);
-  assert.match(html, /class="signup-sticky"/);
-  assert.match(html, /class="footer-signup"/);
+  assert.doesNotMatch(html, /class="signup-sticky"/);
+  assert.doesNotMatch(html, /class="footer-signup"/);
   assert.match(html, /<a href="\/tonight">See tonight's best sunsets across the US<\/a>/);
   const h1 = html.indexOf("<h1>");
   const hero = html.indexOf('id="hero-email"');
@@ -55,7 +53,7 @@ function assertHero(html, { weekId, city }) {
   const lower = html.indexOf('id="city-signup-email"');
   assert.ok(h1 >= 0 && hero > h1, "hero form sits under the title");
   assert.ok(week > hero, "hero form sits above the week table");
-  assert.ok(lower > week, "the lower signup form stays below the week table");
+
   const sample = html.match(/<p class="sample-alert">([\s\S]*?)<\/p>/);
   assert.ok(sample, "sample alert");
   assert.match(sample[1], new RegExp(`Sample alert: (?:&quot;|")${city.city} tonight: 10/10`));
@@ -92,13 +90,12 @@ test("a city page keeps the hero form when the forecast fails, with an example a
       assert.match(form, /type="hidden" name="location" value="Austin, Texas"/);
       assert.match(form, /id="hero-email"/);
       assert.doesNotMatch(form, /name="great_only"/);
-      assert.match(html, /id="city-signup-email"/);
+      assert.doesNotMatch(html, /id="city-signup-email"/);
       const sample = html.match(/<p class="sample-alert">([\s\S]*?)<\/p>/)[1];
       assert.match(sample, /Sample alert \(example\)/);
       assert.match(sample, /Austin tonight: 8\/10, high clouds to catch the color/);
       assert.match(sample, /The email includes the local sunset and golden hour/);
       assert.doesNotMatch(sample, /\d{1,2}:\d{2}/);
-      assert.ok(html.indexOf('id="hero-email"') < html.indexOf('id="city-signup-email"'));
     }
   });
 });

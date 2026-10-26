@@ -131,10 +131,10 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(html, /Sunset 6:59 PM CDT\./);
     assert.match(html, /fetch\("\/api\/score\?q="/);
     assert.match(html, /id="signup"/);
-    assert.match(html, /Know when the light will be good before you drive out/);
+    assert.match(html, /hero-quick-form/);
     assert.match(html, /action="\/api\/subscribe"/);
-    assert.match(html, /class="signup-sticky"/);
-    assert.match(html, /class="footer-signup"/);
+    assert.doesNotMatch(html, /class="signup-sticky"/);
+    assert.doesNotMatch(html, /class="footer-signup"/);
     assert.match(html, /name="location" value="Austin, Texas"/);
     assert.match(html, /Mount Bonnell/);
     const pairs = cityQa(html);
@@ -217,7 +217,6 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(timeHtml, /id="signup"/);
     assert.match(timeHtml, /action="\/api\/subscribe"/);
     assert.match(timeHtml, /name="location" value="Austin, Texas"/);
-    assert.match(timeHtml, /Know when the light will be good before you drive out/);
     const timeList = jsonLdBlocks(timeHtml).find((block) => block["@type"] === "ItemList");
     assert.equal(timeList.itemListElement.length, 7);
   });

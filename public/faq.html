@@ -138,34 +138,8 @@
   </form>
 </section>
 <footer class="site-footer">
-  <form class="footer-signup" action="/api/subscribe" method="post" data-signup data-form="footer">
-    <p>Free sunset alerts</p>
-    <label class="sr-only" for="footer-email">Email</label>
-    <input id="footer-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-    <label class="sr-only" for="footer-location">City or park</label>
-    <input id="footer-location" type="text" name="location" placeholder="City or park" required maxlength="100" aria-label="City or park">
-    <input type="hidden" name="tz">
-    <input type="hidden" name="signup_path" value="/faq">
-    <input type="hidden" name="signup_form" value="footer">
-    <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
-    <button type="submit">Email me</button>
-  </form>
   <p class="footer-links">© 2026 SunsetPing · <a href="/sunset">Sunset cities</a> · <a href="/">Home</a> · <a href="#signup">Get free alerts</a></p>
 </footer>
-<aside class="signup-sticky" data-welcome-host>
-  <form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup data-form="sticky">
-    <p class="signup-sticky-copy">Know when the light will be good before you drive out.</p>
-    <label class="sr-only" for="sticky-email">Email</label>
-    <input id="sticky-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-    <label class="sr-only" for="sticky-location">City or park</label>
-    <input id="sticky-location" type="text" name="location" placeholder="City or park" required maxlength="100" aria-label="City or park">
-    <input type="hidden" name="tz">
-    <input type="hidden" name="signup_path" value="/faq">
-    <input type="hidden" name="signup_form" value="sticky">
-    <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
-    <button type="submit">Get free alerts</button>
-  </form>
-</aside>
 <script src="/app.js" defer></script>
 </body>
 </html>

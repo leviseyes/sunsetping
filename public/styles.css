@@ -598,3 +598,11 @@ body.welcome { background: var(--cream); }
 .hero-signup-city.hero-quick .hero-quick-form { display: flex; gap: 8px; flex-wrap: wrap; }
 .hero-signup-city.hero-quick .hero-quick-form input[type=email] { flex: 1 1 220px; min-height: 52px; font-size: 17px; }
 .hero-signup-city.hero-quick .hero-quick-form button { min-height: 52px; font-weight: 700; padding: 0 22px; }
+
+/* Quiet single signup (one prompt per screen) */
+.signup-quiet { max-width: 560px; margin: 40px auto 8px; text-align: left; }
+.signup-quiet-copy { margin: 0 0 10px; font-size: 15px; opacity: .8; }
+.signup-quiet .hero-quick-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.signup-quiet .hero-quick-form input[type=email] { flex: 1 1 220px; min-height: 48px; font-size: 16px; }
+.signup-quiet .hero-quick-form button { min-height: 48px; font-weight: 600; padding: 0 20px; }
+.signup-sticky { display: none !important; }

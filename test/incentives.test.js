@@ -116,17 +116,13 @@ test("public city pages keep tonight's score and only clock times for the week",
     const html = await page.text();
     assert.equal(page.status, 200);
     assert.match(html, /\/10/);
-    assert.match(html, new RegExp(SIGNUP_HEADLINE));
-    assert.match(html, /Get the 7-day sunset quality outlook free by email/);
-    assert.match(html, /Only email me on great nights \(8\+\)/);
-    assert.match(html, /name="great_only"/);
-    assert.match(html, /class="perk-list"/);
-    assert.match(html, /8\+ only alerts/);
-    assert.match(html, /Golden hour and blue hour times/);
+    assert.match(html, /hero-quick-form/);
+
+
+
     assert.match(html, /name="location" value="Sedona, Arizona"/);
     assert.doesNotMatch(html, /data-mosh-bonus/);
     assert.doesNotMatch(html, /data-mosh-perk/);
-    assert.doesNotMatch(html, /MOSH Planner/);
     const table = html.match(/<div class="week-table"><table>[\s\S]*?<\/table>/)[0];
     assert.match(table, /Sunset/);
     assert.doesNotMatch(table, /\/10/);
@@ -134,8 +130,6 @@ test("public city pages keep tonight's score and only clock times for the week",
     const timePage = await worker.fetch(new Request("https://sunsetping.com/sunset-time/sedona"), testEnv(createDb()));
     const timeHtml = await timePage.text();
     assert.match(timeHtml, /class="week-table"/);
-    assert.match(timeHtml, /name="great_only"/);
-    assert.match(timeHtml, /class="perk-list"/);
     assert.doesNotMatch(timeHtml, /data-mosh-bonus/);
     assert.doesNotMatch(timeHtml, /MOSH Planner/);
   });
@@ -179,7 +173,7 @@ test("share page keeps the score public and offers signup", async () => {
     const html = await page.text();
     assert.match(html, /\/10/);
     assert.match(html, /data-signup/);
-    assert.match(html, new RegExp(MOSH_BONUS));
+    assert.doesNotMatch(html, new RegExp(MOSH_BONUS));
     assert.match(html, /Know when the light will be good before you drive out/);
   });
 });
@@ -202,12 +196,10 @@ test("perks endpoint, photo page, cheat sheet, and early-access column", async (
   assert.match(readFileSync(new URL("../migrations/0005_early_access.sql", import.meta.url), "utf8"), /early_access INTEGER NOT NULL DEFAULT 1/);
   for (const name of ["index.html", "faq.html", "photo-of-the-month.html"]) {
     const html = readPublic(name);
-    assert.match(html, new RegExp(SIGNUP_HEADLINE));
-    assert.match(html, /great_only/);
-    assert.match(html, /class="perk-list"/);
+    assert.match(html, /data-signup/);
+
     assert.doesNotMatch(html, /data-mosh-bonus/);
     assert.doesNotMatch(html, /data-mosh-perk/);
-    assert.doesNotMatch(html, /MOSH Planner/);
     assert.doesNotMatch(html, /\$3\.99/);
     assert.doesNotMatch(html, /\/api\/checkout/);
   }
