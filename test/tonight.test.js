@@ -123,9 +123,9 @@ test("/tonight ranks all 65 cities in a handful of forecast requests", async () 
     const hero = html.indexOf('id="hero-email"');
     const listAt = html.indexOf('class="tonight-list"');
     const lower = html.indexOf('id="signup"');
-    assert.ok(hero > 0 && hero < listAt && listAt < lower, "signup form sits above the list and the lower signup stays");
+    assert.ok(hero > 0 && hero < listAt && lower > 0 && lower < listAt, "one signup form, above the list");
     assert.match(html, /id="hero-email"/);
-    assert.match(html, /name="great_only"/);
+
     assert.match(html, /type="hidden" name="tz"/);
     assert.match(html, /Email me when a sunset is worth it/);
     assert.match(html, /data-signup/);

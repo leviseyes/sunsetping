@@ -27,7 +27,7 @@ export const OG_CARD_VERSION = "3";
  * Bump when rendered city HTML changes so a deploy misses the edge cache.
  * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
  */
-export const CITY_HTML_CACHE_VERSION = "3";
+export const CITY_HTML_CACHE_VERSION = "5";
 /** Edge cache for /tonight. 25 minutes, same window as a city page. */
 export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
@@ -113,47 +113,48 @@ function sampleAlertText(cityName, score) {
   return `Sample alert (example): "${cityName} tonight: 8/10, high clouds to catch the color. The email includes the local sunset and golden hour."`;
 }
 
-function heroSignup({ id = "hero", location = "", button, sample, form = "hero", path = "" }) {
-  return `<section class="hero-signup-city" data-welcome-host>
-<form class="stack hero-signup-form" action="/api/subscribe" method="post" data-signup data-form="${esc(form)}">
-${signupFields({ id, location, button, form, path })}
+/** One email field + button. The city comes from the page (hidden) or, when absent, from the visitor's location server-side. */
+function quickFields({ id, location = "", button = "Email me good sunsets", form = "", path = "" }) {
+  const loc = location ? `<input type="hidden" name="location" value="${esc(location)}">` : "";
+  return `<label class="sr-only" for="${id}-email">Email</label>
+<input id="${id}-email" type="email" name="email" placeholder="Your email" required autocomplete="email" inputmode="email" aria-label="Email">
+${loc}<input type="hidden" name="tz">
+<input type="hidden" name="signup_path" value="${esc(path)}">
+<input type="hidden" name="signup_form" value="${esc(form)}">
+<button class="btn" type="submit">${esc(button)}</button>`;
+}
+
+function heroSignup({ id = "hero", location = "", button, sample, form = "hero", path = "", showMosh = false }) {
+  return `<section class="hero-signup-city hero-quick" id="signup" data-welcome-host>
+<form class="signup hero-signup-form hero-quick-form" action="/api/subscribe" method="post" data-signup data-form="${esc(form)}">
+${quickFields({ id, location, button, form, path })}
 </form>
+<p class="hero-quick-perks">100% free · 8+ night alerts · 7-day outlook · ${showMosh ? "cheat sheet + MOSH Planner PDF" : "free shooting cheat sheet"} · unsubscribe anytime</p>
 <p class="sample-alert">${esc(sample)}</p>
 </section>`;
 }
 
 const TONIGHT_LINK = `<p class="tonight-cross"><a href="/tonight">See tonight's best sunsets across the US</a></p>`;
 
+/** Quiet one-field signup for pages without a hero form. No perk list, no banner. */
 function inlineSignup(location = "", showMosh = false, path = "", form = "inline") {
   const place = location ? String(location).split(",")[0] : "";
-  return `<section class="panel signup-block" id="signup" data-welcome-host>
-<h2>${esc(SIGNUP_HEADLINE)}</h2>
-<p class="lede">${esc(OUTLOOK_CTA)}</p>
-${perkListHtml(showMosh)}
-<form class="stack" action="/api/subscribe" method="post" data-signup data-form="${esc(form)}">
-${signupFields({ id: "city-signup", location, button: place ? `Alert me in ${place}` : "Get free alerts", form, path })}
+  return `<section class="signup-quiet" id="signup" data-welcome-host>
+<p class="signup-quiet-copy">Free sunset alerts${place ? ` for ${esc(place)}` : ""}, only on good nights${showMosh ? ", plus the MOSH Planner PDF" : ""}.</p>
+<form class="signup hero-quick-form" action="/api/subscribe" method="post" data-signup data-form="${esc(form)}">
+${quickFields({ id: "city-signup", location, button: "Email me good sunsets", form, path })}
 </form>
 </section>`;
 }
 
-function stickySignup(location = "", showMosh = false, path = "") {
-  return `<aside class="signup-sticky" data-welcome-host>
-<p class="signup-sticky-copy">${esc(SIGNUP_HEADLINE)}</p>
-${perkListHtml(showMosh)}
-<form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup data-form="sticky">
-${signupFields({ id: "sticky", location, form: "sticky", path })}
-</form>
-</aside>`;
+/** Removed: one signup prompt per screen. Kept as a no-op so callers stay simple. */
+function stickySignup() {
+  return "";
 }
 
 function footer(location = "", showMosh = false, options = {}) {
-  const path = options.path || "";
   const extra = options.extra || "";
-  return `<footer class="site-footer"><form class="footer-signup" action="/api/subscribe" method="post" data-signup data-form="footer">
-<p>Free sunset alerts</p>
-${perkListHtml(showMosh)}
-${signupFields({ id: "footer", location, button: "Email me", form: "footer", path })}
-</form>
+  return `<footer class="site-footer">
 <p class="footer-links">© 2026 SunsetPing · <a href="/tonight">Best sunsets tonight</a> · <a href="/sunset">Sunset cities</a> · <a href="/faq">FAQ</a> · <a href="/photo-of-the-month">Photo of the month</a> · <a href="/#signup">Get free alerts</a>${extra ? ` · ${extra}` : ""}</p></footer>`;
 }
 
@@ -604,6 +605,7 @@ ${topbar()}
 <p class="lede">${esc(city.tip)}</p>
 ${goldenFactsHtml(city, score, qa)}
 ${heroSignup({
+  showMosh: Boolean(moshPdfUrl(env)),
   location: city.query,
   button: `Email me when ${city.city}'s sunset is worth it`,
   sample: sampleAlertText(city.city, score),
@@ -617,7 +619,6 @@ ${quickAnswersHtml(city, qa, `Golden hour in ${city.city} — quick answers`)}
 <h2>Where to shoot golden hour in ${esc(city.city)}</h2>
 <ul>${spots}</ul>
 </section>
-${inlineSignup(city.query, Boolean(moshPdfUrl(env)), `/golden-hour/${city.slug}`)}
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/golden-hour">All cities</a></nav>
 <p>${relatedCityLinks(city, "golden")}</p>
@@ -691,6 +692,7 @@ ${topbar()}
 <p class="lede">${esc(city.tip)}</p>
 ${liveScoreHtml(city, score)}
 ${heroSignup({
+  showMosh: Boolean(moshPdfUrl(env)),
   location: city.query,
   button: `Email me when ${city.city}'s sunset is worth it`,
   sample: sampleAlertText(city.city, score),
@@ -713,7 +715,6 @@ ${embedLink}
 </p>
 </div>
 </section>
-${inlineSignup(city.query, Boolean(moshPdfUrl(env)), pagePath)}
 </div>
 <nav class="nearby" aria-label="Nearby cities"><span>Nearby</span> ${nearby} <a href="/sunset">All cities</a></nav>
 <p>${relatedCityLinks(city, isTime ? "time" : "")}</p>
@@ -1009,13 +1010,13 @@ ${topbar()}
 <h1>Best sunsets tonight in the US</h1>
 <p class="lede">${esc(date)}. ${CITIES.length} cities, ranked by tonight's sunset score. The same scorer as the city pages.</p>
 ${heroSignup({
+  showMosh: Boolean(moshPdfUrl(env)),
   id: "hero",
   button: "Email me when a sunset is worth it",
   sample: tonightSample(ranking),
   path: "/tonight",
 })}
 ${tonightListHtml(ranking)}
-${inlineSignup("", showMosh, "/tonight")}
 </main>${footer("", showMosh, { path: "/tonight", extra: `<a href="/widget">Add this forecast to your site</a>` })}${stickySignup("", showMosh, "/tonight")}<script src="/app.js" defer></script></body></html>`;
 }
 

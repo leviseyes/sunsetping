@@ -172,16 +172,6 @@ async function syncMoshBonus() {
     item.setAttribute("data-mosh-perk", "");
     item.textContent = "Sunset cheat sheet and the MOSH Planner PDF";
   });
-  document.querySelectorAll("[data-welcome-host], .signup-block").forEach((host) => {
-    if (host.querySelector("[data-mosh-bonus]")) return;
-    const form = host.querySelector("form");
-    if (!form) return;
-    const note = document.createElement("p");
-    note.className = "bonus";
-    note.setAttribute("data-mosh-bonus", "");
-    note.textContent = "Free bonus: get the MOSH Planner PDF when you sign up.";
-    form.before(note);
-  });
 }
 syncMoshBonus();
 

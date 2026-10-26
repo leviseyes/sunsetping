@@ -239,8 +239,8 @@ test("every signup form on city pages and static HTML has a placement", async ()
   assert.equal(root, home);
   assert.match(home, /data-form="home-top"/);
   assert.match(home, /data-form="home-mid"/);
-  assert.match(home, /data-form="footer"/);
-  assert.match(home, /data-form="sticky"/);
+  assert.doesNotMatch(home, /data-form="footer"/);
+  assert.doesNotMatch(home, /data-form="sticky"/);
   assert.match(readFileSync(new URL("../public/faq.html", import.meta.url), "utf8"), /data-form="faq"/);
   assert.match(readFileSync(new URL("../public/photo-of-the-month.html", import.meta.url), "utf8"), /data-form="photo"/);
 
@@ -260,9 +260,7 @@ test("every signup form on city pages and static HTML has a placement", async ()
     const city = await worker.fetch(new Request("https://sunsetping.com/sunset/austin"), env);
     const cityHtml = await city.text();
     assert.match(cityHtml, /data-form="hero"/);
-    assert.match(cityHtml, /data-form="inline"/);
-    assert.match(cityHtml, /data-form="sticky"/);
-    assert.match(cityHtml, /data-form="footer"/);
+    assert.equal((cityHtml.match(/data-signup/g) || []).length, 1, "one signup prompt");
     assert.match(cityHtml, /href="\/widget\?city=austin">Add this forecast to your site<\/a>/);
     const tonight = await worker.fetch(new Request("https://sunsetping.com/tonight"), env);
     assert.match(await tonight.text(), /<a href="\/widget">Add this forecast to your site<\/a>/);
