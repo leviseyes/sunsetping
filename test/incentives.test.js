@@ -68,8 +68,7 @@ test("signup stores an 8+ threshold and allows email without a city", async () =
     }), testEnv(createDb()), { waitUntil() {} });
     const created = await bare.json();
     assert.equal(bare.status, 200);
-    assert.equal(created.location, "");
-    assert.match(created.offerHtml, /Add a city whenever you like/);
+    assert.equal(created.location, "Los Angeles, California");
     assert.doesNotMatch(created.offerHtml, /MOSH Planner/);
   });
 });

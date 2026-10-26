@@ -1,3 +1,4 @@
+import { changeCityUrl } from "./geo-default.js";
 import { fetchForecast } from "./openmeteo.js";
 import { rankScores, scoreForecastDay, tzAbbrev, wallParts, zonedWallToUtc } from "./scoring.js";
 import { eveningLightPlan } from "./solar.js";
@@ -215,6 +216,7 @@ export async function runAlerts(env, now = new Date(), deps = {}) {
           plan: sub.plan === "pro" ? "pro" : "free",
           shareUrl: `${base}/s/${encodeURIComponent(action.score.location)}`,
           unsubscribeUrl: `${base}/api/unsubscribe?token=${sub.unsubscribe_token}`,
+          changeCityUrl: changeCityUrl(base, sub.unsubscribe_token),
           light: lightSources.map((spot) => lightSpot(spot, tz)).filter(Boolean),
           outlook,
         });

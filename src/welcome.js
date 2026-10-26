@@ -1,3 +1,4 @@
+import { changeCityUrl } from "./geo-default.js";
 import { renderWelcomeEmail, welcomeSubject } from "./email.js";
 import { forecastUrl } from "./openmeteo.js";
 import { scoreForecastDay, withZoneAbbrev } from "./scoring.js";
@@ -77,6 +78,7 @@ export async function deliverWelcome({ env, subscriber, tonight = null, fetchImp
       location: subscriber.location,
       tonight,
       unsubscribeUrl: `${base}/api/unsubscribe?token=${subscriber.unsubscribe_token}`,
+      changeCityUrl: changeCityUrl(base, subscriber.unsubscribe_token),
       downloads: downloadLinks(env),
     });
     return await sendEmail({
