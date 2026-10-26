@@ -1,4 +1,5 @@
 import { emailProblem } from "./email-quality.js";
+import { changeCityUrl, defaultPlaceFromCf } from "./geo-default.js";
 import { queryForCatalogSlug } from "./cities.js";
 import { rankScores, scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
@@ -81,6 +82,11 @@ async function subscribe(req, env, ctx) {
     "SELECT id, location, lat, lon, tz FROM subscribers WHERE email = ?1"
   ).bind(email).first();
   const isNew = !prior;
+  // One-field forms send no city. Use the visitor's Cloudflare location so
+  // alerts start right away (the welcome email links to "change your city").
+  if (!place && !(prior && prior.lat != null && prior.lon != null)) {
+    place = defaultPlaceFromCf(req.cf);
+  }
   const stored = {
     location: place ? place.name : (prior?.location || ""),
     lat: place ? place.latitude : (prior?.lat ?? null),
@@ -134,6 +140,55 @@ async function saveSubscriber(env, row) {
       row.email, row.location, row.lat, row.lon, row.tz, row.token, row.threshold,
     ).run();
   }
+}
+
+const TOKEN_RE = /^[a-f0-9]{64}$/;
+
+function cityFormPage({ token, current = "", message = "", status = 200 }) {
+  const e = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Change your city · SunsetPing</title><link rel="stylesheet" href="/styles.css"></head>
+<body class="gate"><main class="gate-card">
+<a class="logo" href="/">SunsetPing</a>
+<h1>Change your city</h1>
+${current ? `<p>Alerts are going to <b>${e(current)}</b>.</p>` : ""}${message ? `<p>${e(message)}</p>` : ""}
+<form class="stack" action="/api/city" method="post">
+<input type="hidden" name="token" value="${e(token)}">
+<label class="sr-only" for="city-location">City or ZIP</label>
+<input id="city-location" type="text" name="location" placeholder="City or ZIP" required minlength="2" maxlength="100" autocomplete="address-level2">
+<button class="btn" type="submit">Use this city</button>
+</form>
+</main></body></html>`;
+  return new Response(html, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+}
+
+async function cityPage(url, env) {
+  const token = url.searchParams.get("token") || "";
+  if (!TOKEN_RE.test(token)) return simplePage("Invalid link", "That link isn't valid.", 400);
+  const row = await env.DB.prepare("SELECT id, location FROM subscribers WHERE unsubscribe_token = ?1").bind(token).first();
+  if (!row) return simplePage("Not found", "We couldn't find that subscription.", 404);
+  return cityFormPage({ token, current: row.location });
+}
+
+async function changeCity(req, env) {
+  const body = await readBody(req);
+  const asJson = wantsJson(req);
+  const token = String(body.token || "");
+  const location = String(body.location || "").trim().slice(0, 100);
+  const fail = (message, status = 400) => (asJson ? json({ ok: false, error: message }, status) : cityFormPage({ token, message, status }));
+  if (!TOKEN_RE.test(token)) return asJson ? json({ ok: false, error: "Invalid link." }, 400) : simplePage("Invalid link", "That link isn't valid.", 400);
+  if (location.length < 2) return fail("Please enter a city or ZIP code.");
+  let place;
+  try {
+    place = await resolvePlace({ q: queryForCatalogSlug(location) });
+  } catch (err) {
+    if (err instanceof HttpError && err.status === 404) return fail("We couldn't find that location. Try a city name.");
+    return fail("We couldn't look up that location. Try again.", 502);
+  }
+  const r = await env.DB.prepare("UPDATE subscribers SET location = ?1, lat = ?2, lon = ?3, tz = ?4 WHERE unsubscribe_token = ?5")
+    .bind(place.name, place.latitude, place.longitude, place.timezone || null, token).run();
+  if (!r.meta?.changes) return asJson ? json({ ok: false, error: "Not found." }, 404) : simplePage("Not found", "We couldn't find that subscription.", 404);
+  if (asJson) return json({ ok: true, location: place.name });
+  return simplePage("City updated", `Your sunset alerts now go to ${place.name}.`);
 }
 
 async function unsubscribe(url, env) {
@@ -256,6 +311,10 @@ async function handleApi(req, url, env, ctx) {
     return subscribe(req, env, ctx);
   }
   if (url.pathname === "/api/unsubscribe") return unsubscribe(url, env);
+  if (url.pathname === "/api/city") {
+    if (req.method !== "POST") return json({ error: "POST only" }, 405);
+    return changeCity(req, env);
+  }
 
   // Editorial issue. Not on the 15-minute alert cron — that job has no copy to send.
   // Deduped per subscriber for the issue week via alert_sends (kind newsletter).
@@ -357,6 +416,7 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
     try {
+      if (url.pathname === "/city" || url.pathname === "/city/") return cityPage(url, env);
       if (url.pathname === "/lookup") {
         const q = (url.searchParams.get("q") || "").trim();
         if (q.length < 2) return Response.redirect(new URL("/", url), 302);

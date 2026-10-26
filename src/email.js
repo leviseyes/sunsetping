@@ -46,7 +46,11 @@ function shareBlock(href, when) {
  * `when` is "tonight" | "tomorrow" | "sunrise".
  * Pass unsubscribeUrl to replace the {{unsubscribe_url}} placeholder.
  */
-export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", when = "tonight", ranking = null, shareUrl = "", light = null, outlook = null } = {}) {
+function cityLink(url) {
+  return url ? ` · <a href="${escapeHtml(url)}" style="color:#c4541a">Change your city</a>` : "";
+}
+
+export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", changeCityUrl = "", when = "tonight", ranking = null, shareUrl = "", light = null, outlook = null } = {}) {
   const c = r.score >= 6 ? "#f97316" : "#64748b";
   const e = {
     date: escapeHtml(r.date),
@@ -87,7 +91,7 @@ ${rankingBlock(ranking)}
 ${extra}
 <p style="font-size:14px;color:#6f655d;margin:16px 0 0;line-height:1.5">${tip}</p>
 </td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
-You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
+You're getting this because you signed up at sunsetping.com${cityLink(changeCityUrl)} · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -115,7 +119,7 @@ export function welcomeSubject(location) {
  * First-signup note. Same cream card as the daily alert.
  * Omit the score block when tonight is missing.
  */
-export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl, downloads = [] }) {
+export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl, changeCityUrl = "", downloads = [] }) {
   const place = escapeHtml(location);
   const safeUrl = escapeHtml(unsubscribeUrl);
   const hasScore = tonight && tonight.score != null && tonight.score !== "";
@@ -135,7 +139,7 @@ export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl, d
   const perks = FREE_PERKS.map((line) => `<li style="margin:0 0 4px">${escapeHtml(line)}</li>`).join("");
   const placeName = String(location || "").trim();
   const intro = placeName
-    ? `You're in. We'll email you before sunset in <b>${place}</b>.`
+    ? `You're in. We'll email you before sunset in <b>${place}</b>.${changeCityUrl ? ` Not your city? <a href="${escapeHtml(changeCityUrl)}" style="color:#c4541a">Change it in one click</a>.` : ""}`
     : "You're in. Add a city whenever you like and we'll email you before sunset.";
   const downloadHtml = (downloads || []).map((item) => `<a href="${escapeHtml(item.href)}" style="color:#c4541a">${escapeHtml(item.label)}</a>`).join("<br>");
   const files = downloadHtml ? `<p style="font-size:15px;color:#1c1612;margin:16px 0 8px;line-height:1.55">${downloadHtml}</p>` : "";
@@ -154,7 +158,7 @@ ${tonightLine}${reason}
 <ul style="margin:0 0 16px;padding-left:20px;color:#4b5563;font-size:15px">${perks}</ul>
 <p style="font-size:14px;color:#6f655d;margin:12px 0 0;line-height:1.5">SunsetPing is free. Unsubscribe any time.</p>
 </td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
-You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
+You're getting this because you signed up at sunsetping.com${cityLink(changeCityUrl)} · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
 

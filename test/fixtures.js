@@ -171,6 +171,16 @@ export function createDb(initial = {}) {
       state.saved = state.saved.filter((s) => !(s.id === args[0] && s.subscriber_id === args[1]));
       return { success: true, meta: { changes: before - state.saved.length } };
     }
+    if (sql.includes("SET location = ?1") && sql.includes("unsubscribe_token = ?5")) {
+      const row = state.subscribers.find((s) => s.unsubscribe_token === args[4]);
+      if (!row) return { success: true, meta: { changes: 0 } };
+      Object.assign(row, { location: args[0], lat: args[1], lon: args[2], tz: args[3] });
+      return { success: true, meta: { changes: 1 } };
+    }
+    if (sql.includes("FROM subscribers") && sql.includes("WHERE unsubscribe_token")) {
+      const row = state.subscribers.find((s) => s.unsubscribe_token === args[0]) || null;
+      return mode === "first" ? row : { results: row ? [row] : [] };
+    }
     if (sql.includes("SET status='unsubscribed'")) {
       const row = state.subscribers.find((s) => s.unsubscribe_token === args[0]);
       if (!row || row.status === "unsubscribed") return { success: true, meta: { changes: 0 } };
