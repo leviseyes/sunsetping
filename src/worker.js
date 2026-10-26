@@ -1,3 +1,4 @@
+import { emailProblem } from "./email-quality.js";
 import { queryForCatalogSlug } from "./cities.js";
 import { rankScores, scoreForecastDay, withZoneAbbrev } from "./scoring.js";
 import { fetchForecast, HttpError, resolvePlace } from "./openmeteo.js";
@@ -62,6 +63,8 @@ async function subscribe(req, env, ctx) {
   const location = String(body.location || "").trim().slice(0, 100);
   const threshold = wantsGreatNights(body.great_only) ? 8 : null;
   if (!EMAIL_RE.test(email) || email.length > 254) return fail("Please enter a valid email.");
+  const junk = emailProblem(email);
+  if (junk) return fail(junk);
   if (location.length === 1) return fail("Please enter a city or ZIP code, or leave it blank.");
   let place = null;
   if (location.length >= 2) {

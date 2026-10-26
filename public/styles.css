@@ -584,3 +584,12 @@ body.welcome { background: var(--cream); }
   .welcome-pro .actions { flex-direction: row; align-items: stretch; }
   .welcome-pro .btn { flex: 1; width: auto; }
 }
+
+/* 2026-10-26: one-field hero signup */
+.hero-quick { max-width: 560px; }
+.stage .hero-quick .hero-quick-form { display: flex; gap: 8px; flex-wrap: wrap; }
+.stage .hero-quick .hero-quick-form input[type=email] { flex: 1 1 220px; min-height: 52px; font-size: 17px; }
+.stage .hero-quick .hero-quick-form button { min-height: 52px; font-weight: 700; padding: 0 22px; }
+.hero-quick-perks { margin: 8px 0 0; font-size: 14px; opacity: .9; }
+.signup-sticky-close { background: transparent !important; border: 0 !important; color: inherit !important; font-size: 22px; min-width: 40px; padding: 0 !important; }
+.signup-sticky.is-hidden { display: none; }
