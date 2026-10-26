@@ -312,3 +312,14 @@ document.getElementById("geo")?.addEventListener("click", () => {
     }
   );
 });
+
+// Sticky bar: dismissible for the session.
+(function stickyClose() {
+  const bar = document.querySelector(".signup-sticky");
+  if (!bar) return;
+  try { if (sessionStorage.getItem("sp_sticky_closed")) bar.classList.add("is-hidden"); } catch (_) {}
+  bar.querySelector("[data-sticky-close]")?.addEventListener("click", () => {
+    bar.classList.add("is-hidden");
+    try { sessionStorage.setItem("sp_sticky_closed", "1"); } catch (_) {}
+  });
+})();

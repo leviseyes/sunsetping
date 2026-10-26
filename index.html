@@ -53,27 +53,16 @@
     <p class="kicker">For landscape photographers</p>
     <h1>Know when the light will be good before you drive out.</h1>
     <p class="sub">Free sunset and golden-hour quality alerts. A 1–10 score for the sky, before you pack the car.</p>
-    <div class="hero-signup" id="signup" data-welcome-host>
-      <h2>Know when the light will be good before you drive out</h2>
-      <ul class="perk-list">
-        <li>7-day sunset quality outlook, free by email</li>
-        <li>8+ only alerts. Never waste a drive.</li>
-        <li>Golden hour and blue hour times in every alert</li>
-        <li>Sunset shooting cheat sheet</li>
-        <li>Photo of the month: reply with your best sunset shot</li>
-        <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
-      </ul>
-      <form class="signup" action="/api/subscribe" method="post" data-signup data-form="home-top">
+    <div class="hero-signup hero-quick" id="signup" data-welcome-host>
+      <form class="signup hero-quick-form" action="/api/subscribe" method="post" data-signup data-form="home-top">
         <label class="sr-only" for="hero-email">Email</label>
-        <input id="hero-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-        <label class="sr-only" for="hero-location">City or ZIP, optional</label>
-        <input id="hero-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
+        <input id="hero-email" type="email" name="email" placeholder="Your email" required autocomplete="email" inputmode="email" aria-label="Email">
         <input type="hidden" name="tz">
         <input type="hidden" name="signup_path" value="/">
         <input type="hidden" name="signup_form" value="home-top">
-        <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
-        <button type="submit">Get free alerts</button>
+        <button type="submit">Email me good sunsets</button>
       </form>
+      <p class="hero-quick-perks">100% free · 7-day sunset outlook · 8+ night alerts · free shooting cheat sheet PDF · unsubscribe in one click</p>
     </div>
     <p class="lookup-label">Or check a score first. No account.</p>
     <p class="fine"><a href="/tonight">See tonight's best sunsets across the US</a></p>
@@ -236,24 +225,14 @@
 </footer>
 <aside class="signup-sticky" data-welcome-host>
   <form class="signup-sticky-form" action="/api/subscribe" method="post" data-signup data-form="sticky">
-    <p class="signup-sticky-copy">Know when the light will be good before you drive out.</p>
-    <ul class="perk-list">
-      <li>7-day sunset quality outlook, free by email</li>
-      <li>8+ only alerts. Never waste a drive.</li>
-      <li>Golden hour and blue hour times in every alert</li>
-      <li>Sunset shooting cheat sheet</li>
-      <li>Photo of the month: reply with your best sunset shot</li>
-      <li>Subscribers get first access to upcoming aurora &amp; fog alerts</li>
-    </ul>
+    <p class="signup-sticky-copy">Free sunset alerts for photographers. Only good nights.</p>
     <label class="sr-only" for="sticky-email">Email</label>
     <input id="sticky-email" type="email" name="email" placeholder="you@email.com" required autocomplete="email" aria-label="Email">
-    <label class="sr-only" for="sticky-location">City or ZIP, optional</label>
-    <input id="sticky-location" type="text" name="location" placeholder="City or ZIP (optional)" maxlength="100" aria-label="City or ZIP, optional">
     <input type="hidden" name="tz">
     <input type="hidden" name="signup_path" value="/">
     <input type="hidden" name="signup_form" value="sticky">
-    <label class="check"><input type="checkbox" name="great_only" value="1"> Only email me on great nights (8+)</label>
     <button type="submit">Get free alerts</button>
+    <button type="button" class="signup-sticky-close" aria-label="Close" data-sticky-close>×</button>
   </form>
 </aside>
 <script src="/app.js" defer></script>
