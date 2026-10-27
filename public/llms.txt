@@ -22,14 +22,14 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 
 - SunsetPing is free. The price is 0.
 - Checking a score does not require an account.
-- Free alerts include up to 10 saved spots, sunrise alerts, a 7-day sunset quality outlook by email, golden hour and blue hour times, a day-before heads-up at 4:00 PM local, an optional 8+ nights only setting, a sunset shooting cheat sheet, photo of the month, first access to upcoming aurora and fog alerts, and a best-spot ranking in the evening email.
+- Free alerts include up to 10 saved spots, sunrise alerts, a 7-day sunset quality outlook by email, golden hour and blue hour times, a day-before heads-up at 4:00 PM local, an optional 8+ nights only setting, a sunset shooting cheat sheet PDF, the MOSH Planner PDF, photo of the month, first access to upcoming aurora and fog alerts, and a best-spot ranking in the evening email.
 - Sign up at https://sunsetping.com/#signup. There is no paid plan.
 
 ## Common questions
 
 - What is SunsetPing? SunsetPing tells landscape photographers whether the light is worth the drive. You type a city or ZIP code and get a score from 1 to 10, the local sunset time, a short viewing window, and one sentence on why. You can also get a free email the same day. Checking a score does not require an account.
 - How does the sunset score work? The score is a whole number from 1 to 10. It uses the weather in the hour around sunset: low cloud, mid cloud, and high cloud, plus humidity, visibility, and precipitation. Enough broken cloud to catch the color scores higher. A thick low blanket, rain, or poor visibility scores lower. A completely clear sky also scores lower, because there is little for the light to catch. 8 or above means don't miss it. 6 or 7 is worth stepping outside. 4 or 5 is a quick peek. 3 or below means you can probably skip tonight.
-- What do free alerts include? A home location plus up to 10 saved spots, sunrise alerts, a 7-day sunset quality outlook by email, golden hour and blue hour times, a day-before heads-up at 4:00 PM local, an optional 8+ nights only setting, a sunset shooting cheat sheet, photo of the month, first access to upcoming aurora and fog alerts, and a best-spot ranking in the evening email. The price is 0.
+- What do free alerts include? A home location plus up to 10 saved spots, sunrise alerts, a 7-day sunset quality outlook by email, golden hour and blue hour times, a day-before heads-up at 4:00 PM local, an optional 8+ nights only setting, a sunset shooting cheat sheet PDF, the MOSH Planner PDF, photo of the month, first access to upcoming aurora and fog alerts, and a best-spot ranking in the evening email. The price is 0.
 - How much does SunsetPing cost? SunsetPing is free. The price is 0. Sign up with an email and a city. There is no paid plan.
 - How do alerts arrive? The sunset alert is about three hours ahead. Sunrise alerts are about an hour ahead when turned on, and a day-before note goes out at 4:00 PM local when turned on.
 - How do I cancel or unsubscribe? Every alert email has an unsubscribe link that stops future emails.
@@ -41,13 +41,20 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 - [Photo of the month](https://sunsetping.com/photo-of-the-month): subscribers reply to any SunsetPing email; the winner is featured on the site, in the newsletter, and @MosheLevis on X
 - [City index](https://sunsetping.com/sunset): 65 city forecast pages
 - [Example city](https://sunsetping.com/sunset/sedona): sunset time today, golden hour, tonight's score, and sunset times for the next 7 days in the HTML
-- [Best sunsets tonight](https://sunsetping.com/tonight): all 65 cities ranked by tonight's score
+- [Best sunsets tonight](https://sunsetping.com/tonight): all 65 cities ranked by tonight's score, with a short answer to "where is the best sunset in the US tonight?"
 - [Forecast widget](https://sunsetping.com/widget): free embed of tonight's sunset score for a photography website
 - [Sitemap](https://sunsetping.com/sitemap.xml)
 
 City page pattern: https://sunsetping.com/sunset/<city-slug>
 Sunset time pattern: https://sunsetping.com/sunset-time/<city-slug>
 Share-a-forecast pattern: https://sunsetping.com/s/<place>
+
+## Sunset time today
+
+Each /sunset-time page answers "what time is sunset today in <city>?" with today's local sunset time, tonight's score, and sunset times for the next 7 days.
+
+- Pattern: https://sunsetping.com/sunset-time/<city-slug>
+- [Example](https://sunsetping.com/sunset-time/seattle): sunset time today in Seattle
 
 ## Best sunsets tonight
 
@@ -68,3 +75,73 @@ Evening golden hour for landscape photographers. Each page has tonight's golden 
 - [Golden hour index](https://sunsetping.com/golden-hour): all 65 cities
 - [Example](https://sunsetping.com/golden-hour/sedona): golden hour today in Sedona
 - Pattern: https://sunsetping.com/golden-hour/<city-slug>
+
+## All 65 cities
+
+Each city has three pages: /sunset/<slug> (tonight's score and forecast), /sunset-time/<slug> (sunset time today), and /golden-hour/<slug> (golden hour and blue hour today).
+
+- [Albuquerque, New Mexico](https://sunsetping.com/sunset/albuquerque): [sunset time](https://sunsetping.com/sunset-time/albuquerque), [golden hour](https://sunsetping.com/golden-hour/albuquerque)
+- [Asheville, North Carolina](https://sunsetping.com/sunset/asheville): [sunset time](https://sunsetping.com/sunset-time/asheville), [golden hour](https://sunsetping.com/golden-hour/asheville)
+- [Atlanta, Georgia](https://sunsetping.com/sunset/atlanta): [sunset time](https://sunsetping.com/sunset-time/atlanta), [golden hour](https://sunsetping.com/golden-hour/atlanta)
+- [Austin, Texas](https://sunsetping.com/sunset/austin): [sunset time](https://sunsetping.com/sunset-time/austin), [golden hour](https://sunsetping.com/golden-hour/austin)
+- [Baltimore, Maryland](https://sunsetping.com/sunset/baltimore): [sunset time](https://sunsetping.com/sunset-time/baltimore), [golden hour](https://sunsetping.com/golden-hour/baltimore)
+- [Bar Harbor, Maine](https://sunsetping.com/sunset/bar-harbor): [sunset time](https://sunsetping.com/sunset-time/bar-harbor), [golden hour](https://sunsetping.com/golden-hour/bar-harbor)
+- [Big Sur, California](https://sunsetping.com/sunset/big-sur): [sunset time](https://sunsetping.com/sunset-time/big-sur), [golden hour](https://sunsetping.com/golden-hour/big-sur)
+- [Boston, Massachusetts](https://sunsetping.com/sunset/boston): [sunset time](https://sunsetping.com/sunset-time/boston), [golden hour](https://sunsetping.com/golden-hour/boston)
+- [Cannon Beach, Oregon](https://sunsetping.com/sunset/cannon-beach): [sunset time](https://sunsetping.com/sunset-time/cannon-beach), [golden hour](https://sunsetping.com/golden-hour/cannon-beach)
+- [Cape Cod, Massachusetts](https://sunsetping.com/sunset/cape-cod): [sunset time](https://sunsetping.com/sunset-time/cape-cod), [golden hour](https://sunsetping.com/golden-hour/cape-cod)
+- [Charleston, South Carolina](https://sunsetping.com/sunset/charleston): [sunset time](https://sunsetping.com/sunset-time/charleston), [golden hour](https://sunsetping.com/golden-hour/charleston)
+- [Charlotte, North Carolina](https://sunsetping.com/sunset/charlotte): [sunset time](https://sunsetping.com/sunset-time/charlotte), [golden hour](https://sunsetping.com/golden-hour/charlotte)
+- [Chicago, Illinois](https://sunsetping.com/sunset/chicago): [sunset time](https://sunsetping.com/sunset-time/chicago), [golden hour](https://sunsetping.com/golden-hour/chicago)
+- [Columbus, Ohio](https://sunsetping.com/sunset/columbus): [sunset time](https://sunsetping.com/sunset-time/columbus), [golden hour](https://sunsetping.com/golden-hour/columbus)
+- [Dallas, Texas](https://sunsetping.com/sunset/dallas): [sunset time](https://sunsetping.com/sunset-time/dallas), [golden hour](https://sunsetping.com/golden-hour/dallas)
+- [Death Valley, California](https://sunsetping.com/sunset/death-valley): [sunset time](https://sunsetping.com/sunset-time/death-valley), [golden hour](https://sunsetping.com/golden-hour/death-valley)
+- [Denver, Colorado](https://sunsetping.com/sunset/denver): [sunset time](https://sunsetping.com/sunset-time/denver), [golden hour](https://sunsetping.com/golden-hour/denver)
+- [Detroit, Michigan](https://sunsetping.com/sunset/detroit): [sunset time](https://sunsetping.com/sunset-time/detroit), [golden hour](https://sunsetping.com/golden-hour/detroit)
+- [Flagstaff, Arizona](https://sunsetping.com/sunset/flagstaff): [sunset time](https://sunsetping.com/sunset-time/flagstaff), [golden hour](https://sunsetping.com/golden-hour/flagstaff)
+- [Grand Canyon, Arizona](https://sunsetping.com/sunset/grand-canyon): [sunset time](https://sunsetping.com/sunset-time/grand-canyon), [golden hour](https://sunsetping.com/golden-hour/grand-canyon)
+- [Honolulu, Hawaii](https://sunsetping.com/sunset/honolulu): [sunset time](https://sunsetping.com/sunset-time/honolulu), [golden hour](https://sunsetping.com/golden-hour/honolulu)
+- [Houston, Texas](https://sunsetping.com/sunset/houston): [sunset time](https://sunsetping.com/sunset-time/houston), [golden hour](https://sunsetping.com/golden-hour/houston)
+- [Jacksonville, Florida](https://sunsetping.com/sunset/jacksonville): [sunset time](https://sunsetping.com/sunset-time/jacksonville), [golden hour](https://sunsetping.com/golden-hour/jacksonville)
+- [Joshua Tree, California](https://sunsetping.com/sunset/joshua-tree): [sunset time](https://sunsetping.com/sunset-time/joshua-tree), [golden hour](https://sunsetping.com/golden-hour/joshua-tree)
+- [Kansas City, Missouri](https://sunsetping.com/sunset/kansas-city): [sunset time](https://sunsetping.com/sunset-time/kansas-city), [golden hour](https://sunsetping.com/golden-hour/kansas-city)
+- [Kauai, Hawaii](https://sunsetping.com/sunset/kauai): [sunset time](https://sunsetping.com/sunset-time/kauai), [golden hour](https://sunsetping.com/golden-hour/kauai)
+- [Key West, Florida](https://sunsetping.com/sunset/key-west): [sunset time](https://sunsetping.com/sunset-time/key-west), [golden hour](https://sunsetping.com/golden-hour/key-west)
+- [La Jolla, California](https://sunsetping.com/sunset/la-jolla): [sunset time](https://sunsetping.com/sunset-time/la-jolla), [golden hour](https://sunsetping.com/golden-hour/la-jolla)
+- [Lake Tahoe, California](https://sunsetping.com/sunset/lake-tahoe): [sunset time](https://sunsetping.com/sunset-time/lake-tahoe), [golden hour](https://sunsetping.com/golden-hour/lake-tahoe)
+- [Las Vegas, Nevada](https://sunsetping.com/sunset/las-vegas): [sunset time](https://sunsetping.com/sunset-time/las-vegas), [golden hour](https://sunsetping.com/golden-hour/las-vegas)
+- [Los Angeles, California](https://sunsetping.com/sunset/los-angeles): [sunset time](https://sunsetping.com/sunset-time/los-angeles), [golden hour](https://sunsetping.com/golden-hour/los-angeles)
+- [Malibu, California](https://sunsetping.com/sunset/malibu): [sunset time](https://sunsetping.com/sunset-time/malibu), [golden hour](https://sunsetping.com/golden-hour/malibu)
+- [Maui, Hawaii](https://sunsetping.com/sunset/maui): [sunset time](https://sunsetping.com/sunset-time/maui), [golden hour](https://sunsetping.com/golden-hour/maui)
+- [Miami, Florida](https://sunsetping.com/sunset/miami): [sunset time](https://sunsetping.com/sunset-time/miami), [golden hour](https://sunsetping.com/golden-hour/miami)
+- [Minneapolis, Minnesota](https://sunsetping.com/sunset/minneapolis): [sunset time](https://sunsetping.com/sunset-time/minneapolis), [golden hour](https://sunsetping.com/golden-hour/minneapolis)
+- [Moab, Utah](https://sunsetping.com/sunset/moab): [sunset time](https://sunsetping.com/sunset-time/moab), [golden hour](https://sunsetping.com/golden-hour/moab)
+- [Monterey, California](https://sunsetping.com/sunset/monterey): [sunset time](https://sunsetping.com/sunset-time/monterey), [golden hour](https://sunsetping.com/golden-hour/monterey)
+- [Nashville, Tennessee](https://sunsetping.com/sunset/nashville): [sunset time](https://sunsetping.com/sunset-time/nashville), [golden hour](https://sunsetping.com/golden-hour/nashville)
+- [New Orleans, Louisiana](https://sunsetping.com/sunset/new-orleans): [sunset time](https://sunsetping.com/sunset-time/new-orleans), [golden hour](https://sunsetping.com/golden-hour/new-orleans)
+- [New York, New York](https://sunsetping.com/sunset/new-york): [sunset time](https://sunsetping.com/sunset-time/new-york), [golden hour](https://sunsetping.com/golden-hour/new-york)
+- [Orlando, Florida](https://sunsetping.com/sunset/orlando): [sunset time](https://sunsetping.com/sunset-time/orlando), [golden hour](https://sunsetping.com/golden-hour/orlando)
+- [Outer Banks, North Carolina](https://sunsetping.com/sunset/outer-banks): [sunset time](https://sunsetping.com/sunset-time/outer-banks), [golden hour](https://sunsetping.com/golden-hour/outer-banks)
+- [Park City, Utah](https://sunsetping.com/sunset/park-city): [sunset time](https://sunsetping.com/sunset-time/park-city), [golden hour](https://sunsetping.com/golden-hour/park-city)
+- [Philadelphia, Pennsylvania](https://sunsetping.com/sunset/philadelphia): [sunset time](https://sunsetping.com/sunset-time/philadelphia), [golden hour](https://sunsetping.com/golden-hour/philadelphia)
+- [Phoenix, Arizona](https://sunsetping.com/sunset/phoenix): [sunset time](https://sunsetping.com/sunset-time/phoenix), [golden hour](https://sunsetping.com/golden-hour/phoenix)
+- [Portland, Oregon](https://sunsetping.com/sunset/portland): [sunset time](https://sunsetping.com/sunset-time/portland), [golden hour](https://sunsetping.com/golden-hour/portland)
+- [Salt Lake City, Utah](https://sunsetping.com/sunset/salt-lake-city): [sunset time](https://sunsetping.com/sunset-time/salt-lake-city), [golden hour](https://sunsetping.com/golden-hour/salt-lake-city)
+- [San Antonio, Texas](https://sunsetping.com/sunset/san-antonio): [sunset time](https://sunsetping.com/sunset-time/san-antonio), [golden hour](https://sunsetping.com/golden-hour/san-antonio)
+- [San Diego, California](https://sunsetping.com/sunset/san-diego): [sunset time](https://sunsetping.com/sunset-time/san-diego), [golden hour](https://sunsetping.com/golden-hour/san-diego)
+- [San Francisco, California](https://sunsetping.com/sunset/san-francisco): [sunset time](https://sunsetping.com/sunset-time/san-francisco), [golden hour](https://sunsetping.com/golden-hour/san-francisco)
+- [San Jose, California](https://sunsetping.com/sunset/san-jose): [sunset time](https://sunsetping.com/sunset-time/san-jose), [golden hour](https://sunsetping.com/golden-hour/san-jose)
+- [Santa Barbara, California](https://sunsetping.com/sunset/santa-barbara): [sunset time](https://sunsetping.com/sunset-time/santa-barbara), [golden hour](https://sunsetping.com/golden-hour/santa-barbara)
+- [Santa Fe, New Mexico](https://sunsetping.com/sunset/santa-fe): [sunset time](https://sunsetping.com/sunset-time/santa-fe), [golden hour](https://sunsetping.com/golden-hour/santa-fe)
+- [Santa Monica, California](https://sunsetping.com/sunset/santa-monica): [sunset time](https://sunsetping.com/sunset-time/santa-monica), [golden hour](https://sunsetping.com/golden-hour/santa-monica)
+- [Savannah, Georgia](https://sunsetping.com/sunset/savannah): [sunset time](https://sunsetping.com/sunset-time/savannah), [golden hour](https://sunsetping.com/golden-hour/savannah)
+- [Seattle, Washington](https://sunsetping.com/sunset/seattle): [sunset time](https://sunsetping.com/sunset-time/seattle), [golden hour](https://sunsetping.com/golden-hour/seattle)
+- [Sedona, Arizona](https://sunsetping.com/sunset/sedona): [sunset time](https://sunsetping.com/sunset-time/sedona), [golden hour](https://sunsetping.com/golden-hour/sedona)
+- [St. Louis, Missouri](https://sunsetping.com/sunset/st-louis): [sunset time](https://sunsetping.com/sunset-time/st-louis), [golden hour](https://sunsetping.com/golden-hour/st-louis)
+- [Tampa, Florida](https://sunsetping.com/sunset/tampa): [sunset time](https://sunsetping.com/sunset-time/tampa), [golden hour](https://sunsetping.com/golden-hour/tampa)
+- [Telluride, Colorado](https://sunsetping.com/sunset/telluride): [sunset time](https://sunsetping.com/sunset-time/telluride), [golden hour](https://sunsetping.com/golden-hour/telluride)
+- [Tucson, Arizona](https://sunsetping.com/sunset/tucson): [sunset time](https://sunsetping.com/sunset-time/tucson), [golden hour](https://sunsetping.com/golden-hour/tucson)
+- [Washington, District of Columbia](https://sunsetping.com/sunset/washington-dc): [sunset time](https://sunsetping.com/sunset-time/washington-dc), [golden hour](https://sunsetping.com/golden-hour/washington-dc)
+- [Yellowstone, Wyoming](https://sunsetping.com/sunset/yellowstone): [sunset time](https://sunsetping.com/sunset-time/yellowstone), [golden hour](https://sunsetping.com/golden-hour/yellowstone)
+- [Yosemite, California](https://sunsetping.com/sunset/yosemite): [sunset time](https://sunsetping.com/sunset-time/yosemite), [golden hour](https://sunsetping.com/golden-hour/yosemite)
+- [Zion, Utah](https://sunsetping.com/sunset/zion): [sunset time](https://sunsetping.com/sunset-time/zion), [golden hour](https://sunsetping.com/golden-hour/zion)
