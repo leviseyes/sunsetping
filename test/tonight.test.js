@@ -259,3 +259,45 @@ test("/tonight is linked from the homepage, the city index, and the sitemap", as
   assert.match(llms, /https:\/\/sunsetping.com\/tonight/);
   assert.match(llms, /Do not invent a score/);
 });
+
+test("/tonight answers 'where is the best sunset tonight' with FAQPage JSON-LD from the same ranking", async () => {
+  const forecast = forecastMock();
+  const env = testEnv(createDb());
+  await withFetch(forecast.impl, async () => {
+    const html = await (await worker.fetch(new Request("https://sunsetping.com/tonight"), env)).text();
+    const rows = rankingRows(html);
+    const faq = jsonLdBlocks(html).find((block) => block["@type"] === "FAQPage");
+    assert.ok(faq, "FAQPage JSON-LD");
+    assert.equal(faq.mainEntity[0].name, "Where is the best sunset in the US tonight?");
+    const answer = faq.mainEntity[0].acceptedAnswer.text;
+    assert.match(answer, new RegExp(`${rows[0].score}/10`));
+    assert.match(answer, /Sedona/);
+    const listAt = html.indexOf('class="tonight-list"');
+    const qaAt = html.indexOf('class="city-qa"');
+    assert.ok(qaAt > listAt, "quick answers sit below the list");
+    for (const item of faq.mainEntity) assert.ok(html.includes(`<h3>${item.name}</h3>`), "visible question " + item.name);
+    assert.equal(html.indexOf('id="hero-email"', html.indexOf('id="hero-email"') + 1), -1, "no extra signup form");
+  });
+});
+
+test("/tonight has no quick answers when scores fail", async () => {
+  const forecast = forecastMock({ fail: "all" });
+  const env = testEnv(createDb());
+  await withFetch(forecast.impl, async () => {
+    const html = await (await worker.fetch(new Request("https://sunsetping.com/tonight"), env)).text();
+    assert.ok(!jsonLdBlocks(html).some((block) => block["@type"] === "FAQPage"));
+    assert.doesNotMatch(html, /class="city-qa"/);
+  });
+});
+
+test("llms.txt links every catalog city page and mentions both PDFs", () => {
+  const llms = readFileSync(new URL("../public/llms.txt", import.meta.url), "utf8");
+  for (const city of CITIES) {
+    assert.ok(llms.includes(`https://sunsetping.com/sunset/${city.slug})`), city.slug);
+    assert.ok(llms.includes(`https://sunsetping.com/sunset-time/${city.slug})`), city.slug);
+    assert.ok(llms.includes(`https://sunsetping.com/golden-hour/${city.slug})`), city.slug);
+  }
+  assert.match(llms, /MOSH Planner PDF/);
+  assert.match(llms, /cheat sheet PDF/);
+  assert.match(llms, /## Sunset time today/);
+});

@@ -27,7 +27,7 @@ export const OG_CARD_VERSION = "3";
  * Bump when rendered city HTML changes so a deploy misses the edge cache.
  * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
  */
-export const CITY_HTML_CACHE_VERSION = "5";
+export const CITY_HTML_CACHE_VERSION = "7";
 /** Edge cache for /tonight. 25 minutes, same window as a city page. */
 export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
@@ -960,6 +960,40 @@ function tonightListHtml(ranking) {
   return `${note}<ol class="tonight-list">${items}</ol>`;
 }
 
+function listNames(names) {
+  if (names.length <= 1) return names[0] || "";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
+}
+
+/** Visible Q&A for /tonight, built from the same ranking as the list. Empty when scores failed. */
+export function tonightQuickAnswers(ranking, total = CITIES.length) {
+  if (!Array.isArray(ranking) || !ranking.length) return [];
+  const qa = [];
+  const best = Number(ranking[0].score);
+  const leaders = ranking.filter((row) => Number(row.score) === best);
+  const shown = leaders.slice(0, 5).map((row) => (leaders.length > 1 ? row.city : `${row.city}, ${row.region}`));
+  if (leaders.length > shown.length) shown.push(`${leaders.length - shown.length} more`);
+  qa.push({
+    q: "Where is the best sunset in the US tonight?",
+    a: leaders.length > 1
+      ? `${leaders.length} cities share tonight's top SunsetPing score of ${best}/10: ${listNames(shown)}.`
+      : `${shown[0]} has tonight's top SunsetPing score: ${best}/10, ${ranking[0].verdict}. Sunset ${ranking[0].sunset}${ranking[0].tz ? ` ${ranking[0].tz}` : ""}.`,
+  });
+  const great = ranking.filter((row) => Number(row.score) >= 8);
+  qa.push({
+    q: "How many US cities have a great sunset tonight?",
+    a: great.length
+      ? `${great.length} of the ${ranking.length} cities checked score 8/10 or higher tonight, which SunsetPing rates as don't miss it.`
+      : `None of the ${ranking.length} cities checked score 8/10 or higher tonight. The best is ${best}/10.`,
+  });
+  qa.push({
+    q: "How is this list made?",
+    a: `SunsetPing scores ${total} US cities from 1 to 10 using cloud layers, humidity, and visibility in the hour around sunset, then ranks them. The list refreshes about every 25 minutes.`,
+  });
+  return qa;
+}
+
 function tonightSample(ranking) {
   const top = ranking[0];
   if (!top) return sampleAlertText("Seattle", null);
@@ -989,6 +1023,7 @@ function tonightHtml(env, ranking) {
   const date = usTonightLabel();
   const title = `Best Sunsets Tonight in the US (${date}) | SunsetPing`;
   const description = `Tonight's best sunsets across ${CITIES.length} US cities landscape photographers shoot. Local sunset time, verdict, and a link to each city forecast. Free email alerts.`;
+  const qa = tonightQuickAnswers(ranking);
   const showMosh = Boolean(moshPdfUrl(env));
   const pageLd = {
     "@context": "https://schema.org",
@@ -1002,7 +1037,7 @@ function tonightHtml(env, ranking) {
     title,
     description,
     canonical,
-    jsonLd: [pageLd, tonightJsonLd(base, date, ranking)],
+    jsonLd: [pageLd, tonightJsonLd(base, date, ranking), ...(qa.length ? [faqPageJsonLd(qa)] : [])],
   })}</head>
 <body><main class="wrap doc">
 ${topbar()}
@@ -1017,6 +1052,7 @@ ${heroSignup({
   path: "/tonight",
 })}
 ${tonightListHtml(ranking)}
+${quickAnswersHtml({ city: "the US" }, qa, "Best sunset tonight — quick answers")}
 </main>${footer("", showMosh, { path: "/tonight", extra: `<a href="/widget">Add this forecast to your site</a>` })}${stickySignup("", showMosh, "/tonight")}<script src="/app.js" defer></script></body></html>`;
 }
 
