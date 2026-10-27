@@ -271,7 +271,7 @@ test("/tonight answers 'where is the best sunset tonight' with FAQPage JSON-LD f
     assert.equal(faq.mainEntity[0].name, "Where is the best sunset in the US tonight?");
     const answer = faq.mainEntity[0].acceptedAnswer.text;
     assert.match(answer, new RegExp(`${rows[0].score}/10`));
-    assert.match(answer, /Sedona, Arizona/);
+    assert.match(answer, /Sedona/);
     const listAt = html.indexOf('class="tonight-list"');
     const qaAt = html.indexOf('class="city-qa"');
     assert.ok(qaAt > listAt, "quick answers sit below the list");

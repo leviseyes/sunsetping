@@ -972,12 +972,12 @@ export function tonightQuickAnswers(ranking, total = CITIES.length) {
   const qa = [];
   const best = Number(ranking[0].score);
   const leaders = ranking.filter((row) => Number(row.score) === best);
-  const shown = leaders.slice(0, 5).map((row) => `${row.city}, ${row.region}`);
-  const more = leaders.length > shown.length ? ` and ${leaders.length - shown.length} more` : "";
+  const shown = leaders.slice(0, 5).map((row) => (leaders.length > 1 ? row.city : `${row.city}, ${row.region}`));
+  if (leaders.length > shown.length) shown.push(`${leaders.length - shown.length} more`);
   qa.push({
     q: "Where is the best sunset in the US tonight?",
     a: leaders.length > 1
-      ? `${leaders.length} cities share tonight's top SunsetPing score of ${best}/10: ${listNames(shown)}${more}.`
+      ? `${leaders.length} cities share tonight's top SunsetPing score of ${best}/10: ${listNames(shown)}.`
       : `${shown[0]} has tonight's top SunsetPing score: ${best}/10, ${ranking[0].verdict}. Sunset ${ranking[0].sunset}${ranking[0].tz ? ` ${ranking[0].tz}` : ""}.`,
   });
   const great = ranking.filter((row) => Number(row.score) >= 8);
