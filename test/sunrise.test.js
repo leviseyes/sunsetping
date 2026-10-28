@@ -29,6 +29,13 @@ test("sunriseUtc is before noon and matches a known Seattle sunrise within a few
   assert.ok(Math.abs(minutes - (14 * 60 + 30)) <= 4, `got ${utc.toISOString()}`);
 });
 
+test("sunrise verdict never says tonight", async () => {
+  const { morningFromScored } = await import("../src/growth.js");
+  const m = morningFromScored({ timezone: "America/Los_Angeles", lat: 47.6, lon: -122.3, sunriseIso: "2026-10-14T07:31", sunrise: { time: "7:31 AM", iso: "2026-10-14T07:31", score: 2, verdict: "Probably skip tonight", reason: "x", date: "Wednesday, October 14" } });
+  assert.equal(m.verdict, "Probably skip this sunrise");
+  assert.equal(m.tz, "PDT");
+});
+
 test("weekSunriseTimes returns 7 rows with golden and blue hour", () => {
   const week = weekSunriseTimes({ lat: 47.6062, lon: -122.3321, timeZone: "America/Los_Angeles", startDate: "2026-10-14", forecastSunriseIso: "2026-10-14T07:31" });
   assert.equal(week.days.length, 7);

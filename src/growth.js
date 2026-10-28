@@ -1011,7 +1011,7 @@ export function morningFromScored(scored) {
     blueHourStart: formatClock(addMinutesToIso(iso, -40)),
     goldenHourEnd: formatClock(addMinutesToIso(iso, 60)),
     score: rise.score,
-    verdict: rise.verdict,
+    verdict: String(rise.verdict || "").replace(/ tonight$/, " this sunrise"),
     reason: rise.reason,
     date: rise.date,
     tz,
