@@ -15,6 +15,7 @@ const EXACT_PATHS = new Set([
   "/sunset",
   "/sunset-time",
   "/golden-hour",
+  "/sunrise",
   "/widget",
 ]);
 
@@ -24,7 +25,7 @@ const HTML_ALIASES = {
   "/photo-of-the-month.html": "/photo-of-the-month",
 };
 
-const CITY_PREFIXES = ["/sunset/", "/sunset-time/", "/golden-hour/", "/embed/"];
+const CITY_PREFIXES = ["/sunset/", "/sunset-time/", "/golden-hour/", "/sunrise/", "/embed/"];
 
 /**
  * Bots and non-browser clients. "bot" already covers Googlebot and friends.

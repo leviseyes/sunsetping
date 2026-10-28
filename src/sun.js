@@ -148,3 +148,77 @@ export function weekSunsetTimes({ lat, lon, timeZone, startDate, forecastSunsetI
     return null;
   }
 }
+
+/**
+ * UTC instant of civil sunrise on a calendar date: the transit mirror of sunset
+ * (J_rise = 2 * J_transit - J_set). Null inside the polar day or night.
+ */
+export function sunriseUtc(year, month, day, lat, lon) {
+  const anchor = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+  const lonWest = -lon * RAD;
+  const latRad = lat * RAD;
+  const cycle = julianCycle(toDays(anchor), lonWest);
+  const noon = sunPosition(approxTransit(0, lonWest, cycle));
+  let angle = sunsetHourAngle(latRad, noon.declination);
+  if (angle == null) return null;
+  const nearer = sunPosition(approxTransit(angle, lonWest, cycle));
+  angle = sunsetHourAngle(latRad, nearer.declination);
+  if (angle == null) return null;
+  const set = solarTransit(approxTransit(angle, lonWest, cycle), nearer.meanAnomaly, nearer.ecliptic);
+  const transit = solarTransit(approxTransit(0, lonWest, cycle), noon.meanAnomaly, noon.ecliptic);
+  return fromDays(2 * transit - set);
+}
+
+/**
+ * Next `days` civil sunrises in `timeZone`, starting on `startDate` (YYYY-MM-DD).
+ * Same snapping rule as weekSunsetTimes, against the forecast's sunrise.
+ * Morning golden hour runs from sunrise to 60 minutes after; blue hour is the
+ * 40 minutes before sunrise (mirror of the evening window).
+ */
+export function weekSunriseTimes({ lat, lon, timeZone, startDate, forecastSunriseIso, days = 7 } = {}) {
+  const latitude = Number(lat);
+  const longitude = Number(lon);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  if (!timeZone || !/^\d{4}-\d{2}-\d{2}$/.test(startDate || "")) return null;
+  if (!Number.isInteger(days) || days < 1 || days > 14) return null;
+  try {
+    const instants = [];
+    for (let i = 0; i < days; i++) {
+      const date = addDays(startDate, i);
+      const [y, m, d] = date.split("-").map(Number);
+      const utc = sunriseUtc(y, m, d, latitude, longitude);
+      if (!utc) return null;
+      instants.push(utc);
+    }
+    if (forecastSunriseIso && String(forecastSunriseIso).slice(0, 10) === startDate) {
+      const forecastMs = zonedWallToUtc(forecastSunriseIso, timeZone).getTime();
+      const delta = forecastMs - instants[0].getTime();
+      if (Number.isFinite(delta) && Math.abs(delta) <= SNAP_MS) {
+        for (let i = 0; i < instants.length; i++) instants[i] = new Date(instants[i].getTime() + delta);
+      } else if (Number.isFinite(forecastMs)) {
+        instants[0] = new Date(forecastMs);
+      }
+    }
+    const rows = [];
+    for (let i = 0; i < instants.length; i++) {
+      const utc = roundMinute(instants[i]);
+      const date = addDays(startDate, i);
+      const local = wallIso(utc, timeZone);
+      if (local.slice(0, 10) !== date) return null;
+      rows.push({
+        date,
+        label: formatLongDate(local),
+        shortLabel: shortLabel(date),
+        sunrise: formatClock(local),
+        blueHourStart: formatClock(addMinutesToIso(local, -40)),
+        goldenHourEnd: formatClock(addMinutesToIso(local, 60)),
+        tz: tzAbbrev(timeZone, utc),
+      });
+    }
+    const sameTz = rows.every((row) => row.tz === rows[0].tz) ? rows[0].tz : null;
+    return { timeZone, sameTz, days: rows };
+  } catch {
+    return null;
+  }
+}

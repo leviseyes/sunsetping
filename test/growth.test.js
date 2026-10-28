@@ -118,7 +118,7 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
   assert.match(xml, /<loc>https:\/\/sunsetping\.com\/golden-hour<\/loc>/);
   assert.match(xml, /<loc>https:\/\/sunsetping\.com\/photo-of-the-month<\/loc>/);
   assert.match(xml, /<loc>https:\/\/sunsetping\.com\/tonight<\/loc>/);
-  assert.equal(xml.match(/<loc>/g).length, 7 + CITIES.length * 3);
+  assert.equal(xml.match(/<loc>/g).length, 8 + CITIES.length * 4);
   assert.match(xml, /<loc>https:\/\/sunsetping\.com\/widget<\/loc>/);
   assert.doesNotMatch(xml, /\/embed\//);
   const lastmod = new Intl.DateTimeFormat("en-CA", {
@@ -127,7 +127,7 @@ test("sitemap lists the site, the FAQ, and every city", async () => {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length * 3 + 3);
+  assert.equal(xml.match(/<lastmod>/g).length, CITIES.length * 4 + 4);
   for (const city of CITIES) {
     assert.match(xml, new RegExp(`<loc>https://sunsetping.com/sunset/${city.slug}</loc><lastmod>${lastmod}</lastmod>`));
     assert.match(xml, new RegExp(`<loc>https://sunsetping.com/golden-hour/${city.slug}</loc><lastmod>${lastmod}</lastmod>`));
