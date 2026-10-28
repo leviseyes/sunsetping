@@ -47,6 +47,7 @@ The live score for a city is in the city page HTML at https://sunsetping.com/sun
 
 City page pattern: https://sunsetping.com/sunset/<city-slug>
 Sunset time pattern: https://sunsetping.com/sunset-time/<city-slug>
+Sunrise time pattern: https://sunsetping.com/sunrise/<city-slug>
 Share-a-forecast pattern: https://sunsetping.com/s/<place>
 
 ## Sunset time today
@@ -55,6 +56,14 @@ Each /sunset-time page answers "what time is sunset today in <city>?" with today
 
 - Pattern: https://sunsetping.com/sunset-time/<city-slug>
 - [Example](https://sunsetping.com/sunset-time/seattle): sunset time today in Seattle
+
+## Sunrise time today
+
+Each /sunrise page answers "what time is sunrise today in <city>?" with today's local sunrise time, morning golden hour and blue hour, the sunrise sky score, and sunrise times for the next 7 days.
+
+- Pattern: https://sunsetping.com/sunrise/<city-slug>
+- [Example](https://sunsetping.com/sunrise/seattle): sunrise time today in Seattle
+- [Index](https://sunsetping.com/sunrise): all 65 cities
 
 ## Best sunsets tonight
 

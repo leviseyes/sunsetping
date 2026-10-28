@@ -456,7 +456,7 @@ export default {
     } catch (err) {
       const status = err instanceof HttpError ? err.status : Number.isInteger(err?.status) ? err.status : 0;
       const cityPath = url.pathname.replace(/\/$/, "") || "/";
-      if (cityPath.startsWith("/sunset/") || cityPath.startsWith("/golden-hour/")) {
+      if (cityPath.startsWith("/sunset/") || cityPath.startsWith("/golden-hour/") || cityPath.startsWith("/sunrise/")) {
         console.log(JSON.stringify({ event: "city_page_error", path: url.pathname, message: String(err?.message || err) }));
         try {
           const fallback = await growthRoute(url, env, ctx, { skipScore: true, request: req });
@@ -464,7 +464,7 @@ export default {
         } catch (inner) {
           console.log(JSON.stringify({ event: "city_page_fallback_error", path: url.pathname, message: String(inner?.message || inner) }));
         }
-        const label = cityPath.startsWith("/golden-hour/") ? "Golden hour" : "Tonight's sunset";
+        const label = cityPath.startsWith("/golden-hour/") ? "Golden hour" : cityPath.startsWith("/sunrise/") ? "Sunrise" : "Tonight's sunset";
         return simplePage(label, "The forecast will be back shortly.", 200);
       }
       if (status) {
