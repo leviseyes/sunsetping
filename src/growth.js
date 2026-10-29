@@ -27,7 +27,7 @@ export const OG_CARD_VERSION = "3";
  * Bump when rendered city HTML changes so a deploy misses the edge cache.
  * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
  */
-export const CITY_HTML_CACHE_VERSION = "9";
+export const CITY_HTML_CACHE_VERSION = "10";
 /** Edge cache for /tonight. 25 minutes, same window as a city page. */
 export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
@@ -758,6 +758,11 @@ ${hasScore ? `<p class="city-score"><strong>${esc(morning.score)}/10</strong> ${
 </section>`;
 }
 
+/** Sunrise intro. The city tips describe west-facing sunset views, so they are not reused here. */
+export function sunriseLede(city) {
+  return `The sun comes up in the east, so look for a spot with an open eastern horizon. Here is today's sunrise time in ${city.city}, morning golden and blue hour, and whether the sky is worth the early alarm.`;
+}
+
 function sunriseHtml(env, city, score) {
   const base = origin(env);
   const canonical = `${base}/sunrise/${city.slug}`;
@@ -797,7 +802,7 @@ function sunriseHtml(env, city, score) {
 ${topbar()}
 <p class="kicker">${esc(city.region)}</p>
 <h1>${esc(phrase)}</h1>
-<p class="lede">${esc(city.tip)}</p>
+<p class="lede">${esc(sunriseLede(city))}</p>
 ${sunriseFactsHtml(city, morning, qa)}
 ${heroSignup({
   showMosh: Boolean(moshPdfUrl(env)),
@@ -812,6 +817,7 @@ ${quickAnswersHtml(city, qa, `Sunrise in ${city.city} — quick answers`)}
 <div class="tips">
 <section>
 <h2>Photo spots in ${esc(city.city)}</h2>
+<p class="week-note">These are sunset favorites. For sunrise, pick the one with an open view to the east.</p>
 <ul>${spots}</ul>
 </section>
 </div>

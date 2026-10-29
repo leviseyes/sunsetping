@@ -92,3 +92,14 @@ test("sunrise page falls back gracefully when the forecast fails", async () => {
     assert.match(html, /data-signup/);
   });
 });
+
+test("sunrise page intro talks about the eastern horizon, not the west-facing sunset tip", async () => {
+  await withFetch(seattleFetch(), async () => {
+    const res = await worker.fetch(new Request("https://sunsetping.com/sunrise/seattle"), testEnv(createDb()));
+    const html = await res.text();
+    const seattle = CITIES.find((c) => c.slug === "seattle");
+    assert.match(html, /open eastern horizon/);
+    assert.ok(!html.includes(`<p class="lede">${seattle.tip.slice(0, 30)}`), "sunset tip should not be the sunrise intro");
+    assert.match(html, /For sunrise, pick the one with an open view to the east\./);
+  });
+});
