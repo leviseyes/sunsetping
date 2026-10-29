@@ -1,3 +1,6 @@
+/** Phone-friendly email shell: fluid 520px card, tighter side padding under 540px. */
+const EMAIL_HEAD = `<meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><style>@media only screen and (max-width:540px){.sp-outer{padding:16px 8px!important}.sp-pad{padding-left:22px!important;padding-right:22px!important}}</style>`;
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -74,15 +77,15 @@ export function renderEmail(r, { unsubscribeUrl = "{{unsubscribe_url}}", changeC
   const share = shareUrl || `https://sunsetping.com/s/${encodeURIComponent(r.location)}`;
   const windowLine = Array.isArray(light) && light.length ? lightBlock(light) : viewingLine(r.viewing);
   const extra = shareBlock(share, when);
-  return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
-<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
-<table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
-<tr><td style="padding:36px 36px 8px;font-family:Helvetica,Arial,sans-serif">
+  return `<!doctype html><html><head>${EMAIL_HEAD}</head><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" class="sp-outer" style="padding:40px 16px">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background:#fffcf8;border-radius:28px;overflow:hidden">
+<tr><td class="sp-pad" style="padding:36px 36px 8px;font-family:Helvetica,Arial,sans-serif">
 <div style="font-size:12px;letter-spacing:3px;color:#6f655d">SUNSETPING · ${e.date.toUpperCase()}</div>
 <div style="font-size:92px;line-height:.9;letter-spacing:-2px;margin:18px 0 6px;font-family:Georgia,'Times New Roman',serif">${e.score}<span style="font-size:28px;color:#6f655d;letter-spacing:0">/10</span></div>
 <div style="height:8px;width:72px;border-radius:99px;background:${c};margin:10px 0 14px"></div>
 <div style="font-size:22px;font-family:Georgia,'Times New Roman',serif">${e.verdict}</div></td></tr>
-<tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
+<tr><td class="sp-pad" style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
 <p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">${sentence}</p>
 <p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">${e.reason}</p>
 ${windowLine}
@@ -90,7 +93,7 @@ ${qualityOutlookBlock(outlook)}
 ${rankingBlock(ranking)}
 ${extra}
 <p style="font-size:14px;color:#6f655d;margin:16px 0 0;line-height:1.5">${tip}</p>
-</td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
+</td></tr><tr><td class="sp-pad" style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
 You're getting this because you signed up at sunsetping.com${cityLink(changeCityUrl)} · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -143,13 +146,13 @@ export function renderWelcomeEmail({ location, tonight = null, unsubscribeUrl, c
     : "You're in. Add a city whenever you like and we'll email you before sunset.";
   const downloadHtml = (downloads || []).map((item) => `<a href="${escapeHtml(item.href)}" style="color:#c4541a">${escapeHtml(item.label)}</a>`).join("<br>");
   const files = downloadHtml ? `<p style="font-size:15px;color:#1c1612;margin:16px 0 8px;line-height:1.55">${downloadHtml}</p>` : "";
-  return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
-<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
-<table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
-<tr><td style="padding:36px 36px 8px;font-family:Helvetica,Arial,sans-serif">
+  return `<!doctype html><html><head>${EMAIL_HEAD}</head><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" class="sp-outer" style="padding:40px 16px">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background:#fffcf8;border-radius:28px;overflow:hidden">
+<tr><td class="sp-pad" style="padding:36px 36px 8px;font-family:Helvetica,Arial,sans-serif">
 <div style="font-size:12px;letter-spacing:3px;color:#6f655d">SUNSETPING · ${kicker}</div>
 ${scoreBlock}</td></tr>
-<tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
+<tr><td class="sp-pad" style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
 <p style="font-size:18px;color:#1c1612;margin:12px 0 8px;line-height:1.45">${intro}</p>
 <p style="font-size:16px;color:#6f655d;margin:0 0 18px;line-height:1.5">Know when the light will be good before you drive out. The same-day note arrives about 3 hours before sunset.</p>
 ${files}
@@ -157,7 +160,7 @@ ${tonightLine}${reason}
 <p style="font-size:16px;color:#1c1612;margin:18px 0 8px;line-height:1.45"><b>Included free</b></p>
 <ul style="margin:0 0 16px;padding-left:20px;color:#4b5563;font-size:15px">${perks}</ul>
 <p style="font-size:14px;color:#6f655d;margin:12px 0 0;line-height:1.5">SunsetPing is free. Unsubscribe any time.</p>
-</td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
+</td></tr><tr><td class="sp-pad" style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
 You're getting this because you signed up at sunsetping.com${cityLink(changeCityUrl)} · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;
 }
@@ -241,17 +244,17 @@ export function renderNewsletter(input, { unsubscribeUrl = "{{unsubscribe_url}}"
     ? `<p style="font-size:15px;color:#1c1612;margin:18px 0 8px"><b>What's new</b></p><p style="font-size:16px;color:#6f655d;margin:0 0 8px;line-height:1.5">${escapeHtml(content.feature)}</p>`
     : "";
   const safeUrl = escapeHtml(unsubscribeUrl);
-  return `<!doctype html><html><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
-<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
-<table width="520" cellpadding="0" cellspacing="0" style="background:#fffcf8;border-radius:28px;overflow:hidden">
-<tr><td style="padding:36px 36px 8px;font-family:Helvetica,Arial,sans-serif">
+  return `<!doctype html><html><head>${EMAIL_HEAD}</head><body style="margin:0;background:#f4efe8;font-family:Georgia,'Times New Roman',serif;color:#1c1612">
+<table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" class="sp-outer" style="padding:40px 16px">
+<table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;width:100%;background:#fffcf8;border-radius:28px;overflow:hidden">
+<tr><td class="sp-pad" style="padding:36px 36px 8px;font-family:Helvetica,Arial,sans-serif">
 <div style="font-size:12px;letter-spacing:3px;color:#6f655d">SUNSETPING · WEEKLY${range}</div>
 <div style="font-size:28px;line-height:1.2;margin:18px 0 0;font-family:Georgia,'Times New Roman',serif">This week's best sunset outlook</div>
 ${scoreBlock}${verdict}</td></tr>
-<tr><td style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
+<tr><td class="sp-pad" style="padding:8px 36px 32px;font-family:Helvetica,Arial,sans-serif">
 ${where}${blurb}${moreOutlook(content.highlights.slice(1))}${qualityOutlookBlock(outlook)}${tip}${feature}
 <p style="font-size:14px;color:#6f655d;margin:16px 0 0;line-height:1.5">Photo of the month: reply to any SunsetPing email with your best sunset shot. The winner is featured on the site and @MosheLevis on X.</p>
-</td></tr><tr><td style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
+</td></tr><tr><td class="sp-pad" style="padding:18px 36px 28px;background:#f7f1ea;font-size:12px;color:#a3988e;text-align:center;font-family:Helvetica,Arial,sans-serif">
 You're getting this because you signed up at sunsetping.com · <a href="${safeUrl}" style="color:#c4541a">Unsubscribe</a></td></tr>
 </table></td></tr></table></body></html>`;
 }

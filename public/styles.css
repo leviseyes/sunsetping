@@ -606,3 +606,13 @@ body.welcome { background: var(--cream); }
 .signup-quiet .hero-quick-form input[type=email] { flex: 1 1 220px; min-height: 48px; font-size: 16px; }
 .signup-quiet .hero-quick-form button { min-height: 48px; font-weight: 600; padding: 0 20px; }
 .signup-sticky { display: none !important; }
+
+/* 2026-10-29: mobile polish. Hero signup card stays a soft rounded card (not a pill)
+   when the field and button stack, and the cream sheet no longer covers "Use my location". */
+.stage .hero-signup .signup input[type=email] { border: 0; }
+@media (max-width: 900px) {
+  .stage .hero-signup .signup { border-radius: 22px; padding: 8px; }
+  .stage .hero-quick .hero-quick-form input[type=email],
+  .stage .hero-quick .hero-quick-form button { flex: 0 0 auto; }
+  .hero-copy { padding-bottom: 92px; }
+}
