@@ -27,7 +27,7 @@ export const OG_CARD_VERSION = "3";
  * Bump when rendered city HTML changes so a deploy misses the edge cache.
  * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
  */
-export const CITY_HTML_CACHE_VERSION = "10";
+export const CITY_HTML_CACHE_VERSION = "11";
 /** Edge cache for /tonight. 25 minutes, same window as a city page. */
 export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
@@ -247,12 +247,13 @@ const SCORE_SCRIPT = `<script>
     var strong = document.createElement("strong");
     strong.textContent = String(data.score) + "/10";
     score.append(strong, " ", data.verdict || "");
-    var time = document.createElement("p");
-    time.className = "lede";
-    time.textContent = "Sunset " + (data.sunset || "") + tz + ".";
-    var why = document.createElement("p");
-    why.textContent = data.reason || "";
-    slot.append(fact, score, time, why);
+    slot.append(score, fact);
+    if (data.reason) {
+      var why = document.createElement("p");
+      why.className = "city-reason";
+      why.textContent = data.reason;
+      slot.append(why);
+    }
   }).catch(function () {
     var note = slot.querySelector(".status");
     if (note) note.textContent = "Tonight's score will show here as soon as the forecast responds.";
@@ -444,12 +445,10 @@ function liveScoreHtml(city, score) {
 <p class="status">Checking tonight's sky in ${esc(city.city)}…</p>
 </section>`;
   }
-  const tz = score.tz ? ` ${esc(score.tz)}` : "";
   return `<section ${attrs}>
-<p class="city-fact">${esc(tonightSentence(city.city, score))}</p>
 <p class="city-score"><strong>${esc(score.score)}/10</strong> ${esc(score.verdict)}</p>
-<p class="lede">Sunset ${esc(score.sunset)}${tz}.</p>
-<p>${esc(score.reason)}</p>
+<p class="city-fact">${esc(tonightSentence(city.city, score))}</p>
+${score.reason ? `<p class="city-reason">${esc(score.reason)}</p>` : ""}
 </section>`;
 }
 
