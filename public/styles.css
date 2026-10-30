@@ -356,6 +356,14 @@ footer a { color: var(--ink); }
 .city-fact { margin: 0 0 16px; font-size: 18px; line-height: 1.45; }
 .city-score { margin: 0 0 6px; font-size: 18px; }
 .city-score strong { font-family: var(--serif); font-size: 64px; font-weight: 400; letter-spacing: -0.04em; display: block; line-height: .9; }
+.city-live .city-score { margin-bottom: 12px; }
+.city-live .city-fact { margin-bottom: 8px; }
+.city-reason { margin: 0; color: var(--muted); }
+@media (max-width: 600px) {
+  .city-live { padding: 20px 22px; border-radius: 22px; margin-bottom: 20px; }
+  .city-live .city-fact { font-size: 16px; }
+  .city-live .city-score strong { font-size: 44px; }
+}
 .week-times { margin: 0 0 28px; }
 .week-times h2 { font-size: clamp(32px, 4vw, 48px); line-height: 1.05; margin: 0 0 8px; max-width: 16em; }
 .week-note { margin: 0; color: var(--muted); line-height: 1.5; max-width: 42em; }

@@ -129,6 +129,10 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.match(html, /<h1>Will tonight&#39;s sunset be good in Austin\?<\/h1>/);
     assert.match(html, /<p class="city-score"><strong>10\/10<\/strong>/);
     assert.match(html, /Sunset 6:59 PM CDT\./);
+    // Compact score card: big score first, one fact sentence, no repeated "Sunset X" lede line.
+    const card = html.slice(html.indexOf('id="live-score"'), html.indexOf("</section>", html.indexOf('id="live-score"')));
+    assert.ok(card.indexOf('class="city-score"') < card.indexOf('class="city-fact"'), "score shows before the fact sentence");
+    assert.doesNotMatch(card, /<p class="lede">Sunset /);
     assert.match(html, /fetch\("\/api\/score\?q="/);
     assert.match(html, /id="signup"/);
     assert.match(html, /hero-quick-form/);
