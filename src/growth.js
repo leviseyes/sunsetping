@@ -27,7 +27,7 @@ export const OG_CARD_VERSION = "3";
  * Bump when rendered city HTML changes so a deploy misses the edge cache.
  * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
  */
-export const CITY_HTML_CACHE_VERSION = "11";
+export const CITY_HTML_CACHE_VERSION = "12";
 /** Edge cache for /tonight. 25 minutes, same window as a city page. */
 export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
@@ -358,6 +358,50 @@ export function cityQuickAnswers(city, score) {
   return qa;
 }
 
+/**
+ * Daylight saving change inside the 7-day window (tz abbreviation flips, e.g. MDT -> MST).
+ * Returns { before, after, fallBack } or null. Zones without DST never match.
+ */
+export function clockChangeInWeek(week) {
+  const days = week?.days;
+  if (!Array.isArray(days)) return null;
+  for (let i = 1; i < days.length; i++) {
+    const a = days[i - 1], b = days[i];
+    if (a?.tz && b?.tz && a.tz !== b.tz) {
+      return { before: a, after: b, fallBack: /DT$/.test(a.tz) && /ST$/.test(b.tz) };
+    }
+  }
+  return null;
+}
+
+/** Visible Q&A item about the clock change for a sunset, golden-hour, or sunrise page. */
+export function clockChangeQa(city, week, kind = "sunset") {
+  const change = clockChangeInWeek(week);
+  if (!change) return null;
+  const { before, after, fallBack } = change;
+  const name = city.city;
+  const field = kind === "sunrise" ? "sunrise" : kind === "golden" ? "goldenHourStart" : "sunset";
+  if (!before[field] || !after[field]) return null;
+  const what = kind === "sunrise" ? "sunrise" : kind === "golden" ? "golden hour" : "sunset";
+  const verb = kind === "golden" ? "starts" : "is";
+  const lead = fallBack
+    ? `Daylight saving time ends on ${after.label}, so clocks fall back one hour.`
+    : `Daylight saving time starts on ${after.label}, so clocks spring forward one hour.`;
+  return {
+    q: `Does daylight saving time change the ${what} time in ${name}?`,
+    a: `Yes. ${lead} In ${name}, ${what} ${verb} ${before[field]} ${before.tz} on ${before.label} and ${after[field]} ${after.tz} on ${after.label}.`,
+  };
+}
+
+function clockChangeNoteHtml(week) {
+  const change = clockChangeInWeek(week);
+  if (!change) return "";
+  const text = change.fallBack
+    ? `Clocks fall back one hour on ${change.after.label}, so times shift from ${change.before.tz} to ${change.after.tz}.`
+    : `Clocks spring forward one hour on ${change.after.label}, so times shift from ${change.before.tz} to ${change.after.tz}.`;
+  return `<p class="week-note week-clock-change">${esc(text)}</p>`;
+}
+
 function faqPageJsonLd(qa) {
   return {
     "@context": "https://schema.org",
@@ -415,6 +459,7 @@ function weekTimesHtml(city, week) {
   return `<section class="week-times" id="sunset-week" aria-labelledby="sunset-week-title">
 <h2 id="sunset-week-title">Sunset times this week in ${esc(city.city)}</h2>
 <p class="week-note">Local time (${esc(where)}). Golden hour starts 60 minutes before sunset.</p>
+${clockChangeNoteHtml(week)}
 <div class="week-table"><table>
 <thead><tr><th scope="col">Date</th><th scope="col">Sunset</th><th scope="col">Golden hour starts</th></tr></thead>
 <tbody>${rows}</tbody>
@@ -558,6 +603,7 @@ function goldenWeekHtml(city, week) {
   return `<section class="week-times" id="golden-week" aria-labelledby="golden-week-title">
 <h2 id="golden-week-title">Golden hour this week in ${esc(city.city)}</h2>
 <p class="week-note">Local time (${esc(where)}). Golden hour ends at sunset.</p>
+${clockChangeNoteHtml(week)}
 <div class="week-table"><table>
 <thead><tr><th scope="col">Date</th><th scope="col">Golden hour</th><th scope="col">Sunset</th></tr></thead>
 <tbody>${rows}</tbody>
@@ -577,6 +623,8 @@ function goldenHtml(env, city, score) {
   const spots = city.spots.map((spot) => `<li>${esc(spot)}</li>`).join("");
   const qa = goldenQuickAnswers(city, score);
   const week = score?.week?.days?.length ? score.week : null;
+  const dstQa = clockChangeQa(city, week, "golden");
+  if (dstQa) qa.splice(Math.min(1, qa.length), 0, dstQa);
   const described = describeWithWeek(description, week, "Golden hour for the next 7 days is listed on this page.");
   const pageLd = {
     "@context": "https://schema.org",
@@ -731,6 +779,7 @@ function sunriseWeekHtml(city, week) {
   return `<section class="week-times" id="sunrise-week" aria-labelledby="sunrise-week-title">
 <h2 id="sunrise-week-title">Sunrise times this week in ${esc(city.city)}</h2>
 <p class="week-note">Local time (${esc(where)}). Morning golden hour is the first 60 minutes after sunrise.</p>
+${clockChangeNoteHtml(week)}
 <div class="week-table"><table>
 <thead><tr><th scope="col">Date</th><th scope="col">Sunrise</th><th scope="col">Golden hour</th></tr></thead>
 <tbody>${rows}</tbody>
@@ -774,6 +823,8 @@ function sunriseHtml(env, city, score) {
   const spots = city.spots.map((spot) => `<li>${esc(spot)}</li>`).join("");
   const qa = sunriseQuickAnswers(city, morning);
   const week = morning?.week?.days?.length ? morning.week : null;
+  const dstQa = clockChangeQa(city, week, "sunrise");
+  if (dstQa) qa.splice(Math.min(1, qa.length), 0, dstQa);
   const pagePath = `/sunrise/${city.slug}`;
   const pageLd = {
     "@context": "https://schema.org",
@@ -870,6 +921,8 @@ function cityHtml(env, city, score, variant = "") {
   const shareHref = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(canonical)}`;
   const qa = cityQuickAnswers(city, score);
   const week = score?.week?.days?.length ? score.week : null;
+  const dstQa = clockChangeQa(city, week, "sunset");
+  if (dstQa) qa.splice(Math.min(1, qa.length), 0, dstQa);
   const described = describeWithWeek(description, week);
   const pagePath = isTime ? `/sunset-time/${city.slug}` : `/sunset/${city.slug}`;
   const embedLink = isTime ? "" : `<p><a href="/widget?city=${esc(city.slug)}">Add this forecast to your site</a></p>`;
