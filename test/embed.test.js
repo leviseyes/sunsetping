@@ -266,3 +266,9 @@ test("every signup form on city pages and static HTML has a placement", async ()
     assert.match(await tonight.text(), /<a href="\/widget">Add this forecast to your site<\/a>/);
   });
 });
+
+test("widget snippet includes a crawlable credit link", async () => {
+  const { widgetPage } = await import("../src/growth.js");
+  const html = await widgetPage({}, new URL("https://sunsetping.com/widget?city=sedona")).text();
+  assert.match(html, /&lt;a href=&quot;https:\/\/sunsetping\.com\/sunset\/sedona&quot;&gt;Sedona sunset forecast by SunsetPing/);
+});

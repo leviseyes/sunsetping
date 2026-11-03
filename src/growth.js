@@ -27,7 +27,7 @@ export const OG_CARD_VERSION = "3";
  * Bump when rendered city HTML changes so a deploy misses the edge cache.
  * Separate from OG_CARD_VERSION so score-card image URLs stay on the same picture.
  */
-export const CITY_HTML_CACHE_VERSION = "12";
+export const CITY_HTML_CACHE_VERSION = "13";
 /** Edge cache for /tonight. 25 minutes, same window as a city page. */
 export const TONIGHT_CACHE_SECONDS = 1500;
 const CITY_SCORE_TIMEOUT_MS = 8000;
@@ -189,7 +189,7 @@ export function tonightSentence(cityName, score) {
 
 export function cityPageTitle(cityName, score) {
   if (!score) return `Will tonight's sunset be good in ${cityName}? · SunsetPing`;
-  return `Sunset time today in ${cityName}: ${score.sunset} · tonight ${score.score}/10 · SunsetPing`;
+  return `${cityName} Sunset Forecast Tonight: ${score.score}/10 · sunset ${score.sunset} · SunsetPing`;
 }
 
 export function cityMetaDescription(cityName, score) {
@@ -1560,7 +1560,7 @@ export async function embedPage(env, slug, options = {}) {
   }
 }
 
-const EMBED_SNIPPET = (slug) => `<iframe src="${SITE}/embed/${slug}" width="320" height="140" style="border:0" loading="lazy" title="Tonight's sunset forecast"></iframe>`;
+const EMBED_SNIPPET = (slug, name = "") => `<iframe src="${SITE}/embed/${slug}" width="320" height="140" style="border:0" loading="lazy" title="Tonight's sunset forecast"></iframe>\n<p style="font-size:12px;margin:4px 0 0"><a href="${SITE}/sunset/${slug}">${name ? name + " sunset forecast" : "Sunset forecast"} by SunsetPing</a></p>`;
 
 export function widgetPage(env, url) {
   const base = origin(env);
@@ -1572,7 +1572,7 @@ export function widgetPage(env, url) {
   const options = [...CITIES].sort((a, b) => a.city.localeCompare(b.city)).map((city) =>
     `<option value="${esc(city.slug)}"${city.slug === selected.slug ? " selected" : ""}>${esc(city.city)}, ${esc(city.region)}</option>`
   ).join("");
-  const snippet = EMBED_SNIPPET(selected.slug);
+  const snippet = EMBED_SNIPPET(selected.slug, selected.city);
   const showMosh = Boolean(moshPdfUrl(env));
   const html = `<!doctype html><html lang="en"><head>${head({ title: `${title} · SunsetPing`, description, canonical })}</head>
 <body><main class="wrap doc">
@@ -1588,7 +1588,7 @@ ${topbar()}
 </form>
 <iframe id="widget-preview" src="${SITE}/embed/${esc(selected.slug)}" width="320" height="140" style="border:0" loading="lazy" title="Tonight's sunset forecast"></iframe>
 <label for="widget-snippet">Embed code</label>
-<textarea id="widget-snippet" class="widget-snippet" readonly rows="3">${esc(snippet)}</textarea>
+<textarea id="widget-snippet" class="widget-snippet" readonly rows="4">${esc(snippet)}</textarea>
 ${inlineSignup("", showMosh, "/widget", "widget")}
 </main>${footer("", showMosh, { path: "/widget" })}${stickySignup("", showMosh, "/widget")}<script src="/app.js" defer></script></body></html>`;
   return htmlResponse(html);

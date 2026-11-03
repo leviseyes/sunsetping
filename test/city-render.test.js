@@ -96,7 +96,7 @@ test("tonight's sentence states the sunset time, golden hour, and score", () => 
     tonightSentence("Austin", score),
     "Sunset in Austin today (Thursday, October 15) is at 6:59 PM CDT. Golden hour runs 5:59-6:59 PM and blue hour ends 7:39 PM. Tonight's SunsetPing score is 6/10: Worth stepping outside.",
   );
-  assert.equal(cityPageTitle("Austin", score), "Sunset time today in Austin: 6:59 PM · tonight 6/10 · SunsetPing");
+  assert.equal(cityPageTitle("Austin", score), "Austin Sunset Forecast Tonight: 6/10 · sunset 6:59 PM · SunsetPing");
   assert.match(cityMetaDescription("Austin", score), /Sunset time today in Austin/);
   assert.match(cityMetaDescription("Austin", score), /6\/10/);
 });
@@ -119,10 +119,10 @@ test("a city page includes tonight's forecast in the initial HTML", async () => 
     assert.equal(data.viewing.goldenHourStart, "5:59 PM");
     assert.equal(data.viewing.blueHourEnd, "7:39 PM");
     assert.ok(html.includes(esc(tonightSentence("Austin", data))));
-    assert.match(html, /<title>Sunset time today in Austin: 6:59 PM · tonight 10\/10 · SunsetPing<\/title>/);
-    assert.match(html, /property="og:title" content="Sunset time today in Austin: 6:59 PM · SunsetPing"/);
+    assert.match(html, /<title>Austin Sunset Forecast Tonight: 10\/10 · sunset 6:59 PM · SunsetPing<\/title>/);
+    assert.match(html, /property="og:title" content="Austin Sunset Forecast Tonight · sunset 6:59 PM · SunsetPing"/);
     assert.doesNotMatch(html, /(property|name)="(og|twitter):[^"]*" content="[^"]*\d+\/10/);
-    assert.match(html, /name="twitter:title" content="Sunset time today in Austin: 6:59 PM · SunsetPing"/);
+    assert.match(html, /name="twitter:title" content="Austin Sunset Forecast Tonight · sunset 6:59 PM · SunsetPing"/);
     assert.doesNotMatch(html, /(property|name)="(og|twitter):[^"]*" content="[^"]*\d+\/10/);
     assert.match(html, /property="og:image" content="https:\/\/sunsetping.com\/og\/austin.png\?v=3"/);
     assert.match(html, /name="description" content="[^"]*Sunset time today in Austin is 6:59 PM CDT[^"]*10\/10/);

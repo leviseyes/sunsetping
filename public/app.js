@@ -285,8 +285,9 @@ if (widgetPicker) {
   select?.addEventListener("change", () => {
     const slug = select.value;
     const src = `https://sunsetping.com/embed/${slug}`;
+    const name = (select.options[select.selectedIndex]?.text || "").split(",")[0];
     if (frame) frame.src = src;
-    if (snippet) snippet.value = `<iframe src="${src}" width="320" height="140" style="border:0" loading="lazy" title="Tonight's sunset forecast"></iframe>`;
+    if (snippet) snippet.value = `<iframe src="${src}" width="320" height="140" style="border:0" loading="lazy" title="Tonight's sunset forecast"></iframe>\n<p style="font-size:12px;margin:4px 0 0"><a href="https://sunsetping.com/sunset/${slug}">${name} sunset forecast by SunsetPing</a></p>`;
   });
 }
 
